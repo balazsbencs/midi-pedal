@@ -13,8 +13,12 @@ add_library(midi_core
   src/core/action_engine.cpp
   src/core/expression.cpp
   src/core/config_store.cpp
+  src/core/frame_decoder.cpp
+  src/usb/usb_descriptors.c
+  src/usb/usb_transport.cpp
   src/app/controller.cpp
 )
+set_source_files_properties(src/usb/usb_descriptors.c PROPERTIES LANGUAGE CXX)
 target_include_directories(midi_core PUBLIC src)
 target_compile_features(midi_core PUBLIC cxx_std_20)
 
@@ -41,6 +45,15 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(config_store_test tests/config_store_test.cpp)
   target_link_libraries(config_store_test PRIVATE midi_core GTest::gtest_main)
   target_compile_definitions(config_store_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
+  add_executable(frame_decoder_test tests/frame_decoder_test.cpp)
+  target_link_libraries(frame_decoder_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(usb_descriptor_test tests/usb_descriptor_test.cpp)
+  target_link_libraries(usb_descriptor_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(usb_transport_test tests/usb_transport_test.cpp)
+  target_link_libraries(usb_transport_test PRIVATE midi_core GTest::gtest_main)
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
@@ -62,4 +75,7 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(action_engine_test)
   gtest_discover_tests(expression_test)
   gtest_discover_tests(config_store_test)
+  gtest_discover_tests(frame_decoder_test)
+  gtest_discover_tests(usb_descriptor_test)
+  gtest_discover_tests(usb_transport_test)
 endif()
