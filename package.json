@@ -7,6 +7,7 @@
   "engines": { "node": ">=24 <25" },
   "scripts": {
     "check:toolchain": "node tools/check-toolchain.mjs",
+    "factory:empty": "pnpm --filter @midi-pedal/protocol exec tsx ../../tools/generate-factory-empty.ts",
     "test:ts": "pnpm -r --if-present test",
     "test:cpp": "cmake --preset host-debug && cmake --build --preset host-debug && ctest --preset host-debug --output-on-failure",
     "check": "pnpm check:toolchain && pnpm test:ts && pnpm test:cpp"

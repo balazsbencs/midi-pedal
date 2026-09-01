@@ -1,0 +1,66 @@
+name: firmware
+
+on:
+  push:
+    paths:
+      - "firmware/**"
+      - "third_party/pico-sdk"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "cmake/**"
+      - "tools/generate-factory-empty.ts"
+      - "firmware/defaults/factory-empty.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/firmware.yml"
+  pull_request:
+    paths:
+      - "firmware/**"
+      - "third_party/pico-sdk"
+      - "CMakeLists.txt"
+      - "CMakePresets.json"
+      - "cmake/**"
+      - "tools/generate-factory-empty.ts"
+      - "firmware/defaults/factory-empty.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/firmware.yml"
+
+jobs:
+  firmware:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: sudo apt-get update
+      - run: sudo apt-get install --no-install-recommends ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm factory:empty
+      - run: git diff --exit-code -- firmware/defaults/factory-empty.bin
+      - run: cmake --preset host-debug
+      - run: cmake --build --preset host-debug
+      - run: ctest --preset host-debug --output-on-failure
+      - run: cmake --preset pico2-release
+      - run: cmake --build --preset pico2-release
+      - name: Check firmware boundary
+        shell: bash
+        run: |
+          test -f build/pico2-release/firmware/midi_pedal.uf2
+          bytes=$(stat -c '%s' build/pico2-release/firmware/midi_pedal.bin)
+          test "$bytes" -lt $((2 * 1024 * 1024))
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midi-pedal-firmware
+          path: |
+            build/pico2-release/firmware/midi_pedal.uf2
+            build/pico2-release/firmware/midi_pedal.elf
+            build/pico2-release/firmware/midi_pedal.hex
+            build/pico2-release/firmware/midi_pedal.elf.map
+

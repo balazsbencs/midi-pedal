@@ -1,40 +1,121 @@
 # Building
 
-This guide will track commands verified from a clean clone. The supported host is a desktop Linux, macOS, or Windows machine with Node.js 24, Corepack/pnpm 10, CMake 3.25 or newer, Ninja, Git, an Arm GNU Toolchain, and the Pico SDK 2.2.0.
+The project has two build surfaces: native contract tests (always available)
+and the Pico 2 firmware (requires the Arm compiler and the pinned Pico SDK).
+The browser editor is a separate static Vite package. The commands below are
+the source of truth for CI and are intended for Linux, macOS, and Windows
+(PowerShell or Git Bash).
 
-## Host setup
+## Prerequisites
 
-Install Node.js 24 from the official Node.js distribution, enable Corepack, and select the repository version:
+- Git 2.40 or newer, with submodule support
+- Node.js 24 LTS and Corepack
+- pnpm 10.15.0
+- CMake 3.25 or newer and Ninja
+- Arm GNU Toolchain (`arm-none-eabi-gcc`, `arm-none-eabi-g++`, `arm-none-eabi-newlib`) for firmware
+
+The Pico SDK is pinned as `third_party/pico-sdk` at 2.2.0; do not replace it
+with an unpinned system copy when reproducing a release. On Debian/Ubuntu,
+the common host packages are:
 
 ```bash
-corepack enable
-corepack prepare pnpm@10.15.0 --activate
-pnpm --version
+sudo apt-get install cmake ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
 ```
 
-Install CMake and Ninja from your operating system package manager, install the Arm GNU Toolchain, and make sure `cmake`, `ninja`, `arm-none-eabi-gcc`, and `git` are on `PATH`. Windows users should run these commands in PowerShell or Git Bash with the tools' `bin` directories on `PATH`.
+On macOS install the equivalent packages with Homebrew. On Windows, install
+the Arm GNU Toolchain and CMake/Ninja, then put their `bin` directories on
+`PATH`. Verify the tools before continuing:
 
-## Clean clone and checks
+```bash
+node --version          # v24.x
+corepack enable
+corepack prepare pnpm@10.15.0 --activate
+pnpm --version          # 10.15.0
+cmake --version
+ninja --version
+arm-none-eabi-gcc --version
+```
+
+## Clone and install
 
 ```bash
 git clone --recurse-submodules git@github.com:balazsbencs/midi-pedal.git
 cd midi-pedal
+git submodule update --init --recursive
 corepack enable
 pnpm install --frozen-lockfile
-pnpm check
 ```
 
-The complete command builds host tests and runs the TypeScript and C++ suites. Build directories are generated under `build/` and must not be committed.
-
-To regenerate the language-neutral configuration images after editing a JSON fixture:
+## Native checks
 
 ```bash
+pnpm check:toolchain
 pnpm --filter @midi-pedal/protocol fixtures
 git diff --exit-code protocol/fixtures
+cmake --preset host-debug
+cmake --build --preset host-debug
+ctest --preset host-debug --output-on-failure
 ```
 
-The binary layout and USB frame contract are documented in [protocol.md](protocol.md).
+`pnpm test:ts` runs every workspace TypeScript test and `pnpm test:cpp` runs
+the commands above. `pnpm check` combines the toolchain, TypeScript, and C++
+checks. Native build output is under `build/host-debug/` and is not part of a
+release.
 
-## Current implementation status
+## Pico 2 firmware
 
-Firmware, editor, protocol fixtures, and fabrication commands are added phase by phase. Once those phases land, this guide will contain the exact Debug and Release artifact paths, Pico SDK environment variables, editor typecheck/test/build commands, HIL simulation command, and one all-check command. If a command here differs from the phase plan, use the phase plan until this guide is updated and verified.
+Configure and build the release target from a clean checkout:
+
+```bash
+cmake --preset pico2-release
+cmake --build --preset pico2-release
+```
+
+The release outputs are:
+
+```text
+build/pico2-release/firmware/midi_pedal.uf2  # BOOTSEL drag-and-drop image
+build/pico2-release/firmware/midi_pedal.elf  # debugger image
+build/pico2-release/firmware/midi_pedal.hex  # probe/programmer image
+build/pico2-release/firmware/midi_pedal.elf.map
+```
+
+The linker script keeps firmware below the 2 MiB configuration boundary. To
+inspect the image before flashing:
+
+```bash
+arm-none-eabi-size build/pico2-release/firmware/midi_pedal.elf
+stat -c '%s bytes' build/pico2-release/firmware/midi_pedal.bin   # Linux
+```
+
+Use `Get-Item ... .Length` for the equivalent PowerShell size check. Follow
+[flashing.md](flashing.md) for BOOTSEL, picotool, debug-probe, and recovery
+procedures. The checked-in factory image can be regenerated with:
+
+```bash
+pnpm factory:empty
+git diff --exit-code firmware/defaults/factory-empty.bin
+```
+
+## Editor package
+
+Once the editor package is present, build and test the static site with:
+
+```bash
+pnpm --filter @midi-pedal/editor typecheck
+pnpm --filter @midi-pedal/editor test
+pnpm --filter @midi-pedal/editor build
+```
+
+The deployable files are in `editor/dist/`; no server-side runtime is
+required. See [editor-hosting.md](editor-hosting.md) for HTTPS/WebSerial
+requirements.
+
+## Reproducibility notes
+
+- Do not commit `build/`, `editor/dist/`, or dependency caches.
+- Keep `pnpm-lock.yaml` and the Pico SDK submodule pointer in commits that
+  change tool versions.
+- A physical display, MIDI monitor, relays, and expression pedal are required
+  for the electrical checks in `hardware/validation/`; native tests cannot
+  prove those measurements.
