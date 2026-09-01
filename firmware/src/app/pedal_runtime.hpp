@@ -40,7 +40,7 @@ class PedalRuntime final : public ActionSink {
  public:
   PedalRuntime(RuntimeConfigSource& config, RuntimeSwitchSource& switches, RuntimeExpressionSource& expression_input,
                MidiPort& trs_midi, RelayPort& relays, usb::UsbTransport& usb_midi, usb::UsbPort& usb_port,
-               DisplayPort& display, ExpressionProcessor& expression);
+               DisplayPort& display, ExpressionProcessor& expression, bool watchdog_reset = false);
 
   [[nodiscard]] bool initialize();
   void tick(std::uint32_t now_ms);
@@ -56,6 +56,7 @@ class PedalRuntime final : public ActionSink {
   void handle_chord(Chord chord);
   void render();
   [[nodiscard]] const Preset& current_preset(SwitchId id) const;
+  [[nodiscard]] bool expression_sample_due(std::uint32_t now_ms);
   static bool same_view(const LiveView& left, const LiveView& right);
 
   RuntimeConfigSource& config_;
@@ -78,6 +79,9 @@ class PedalRuntime final : public ActionSink {
   std::array<bool, 2> relay_closed_{};
   bool configuration_error_{};
   bool queue_overflow_{};
+  bool watchdog_reset_{};
+  bool have_expression_schedule_{};
+  std::uint32_t next_expression_sample_at_{};
   std::uint32_t usb_dropped_midi_{};
   LiveView last_view_{};
   bool have_view_{};

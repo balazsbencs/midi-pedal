@@ -17,6 +17,7 @@ struct LiveView {
   bool usbConnected{};
   bool configurationError{};
   bool queueOverflow{};
+  bool watchdogReset{};
 };
 
 struct Clock {

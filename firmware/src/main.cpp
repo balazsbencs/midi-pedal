@@ -16,6 +16,7 @@
 #include "hal/pico_relays.hpp"
 #include "hal/pico_switches.hpp"
 #include "hal/pico_uart_midi.hpp"
+#include "hal/pico_watchdog.hpp"
 #include "display/st7796s.hpp"
 #include "usb/pico_usb.hpp"
 #include "usb/protocol_dispatcher.hpp"
@@ -95,6 +96,8 @@ int main() {
   stdio_init_all();
   midi::PicoFlashPort flash;
   PicoPorts ports;
+  midi::PicoWatchdog watchdog;
+  const auto watchdog_reset = watchdog.initialize();
   midi::ConfigStore config(flash);
   ports.attach_config(config);
   ports.switches().initialize();
@@ -121,12 +124,13 @@ int main() {
   PicoSwitchInput switch_input(ports.switches());
   midi::usb::UsbTransport usb_transport(usb);
   midi::PedalRuntime runtime(config_source, switch_input, expression_input, ports.midi(), ports.relays(),
-                             usb_transport, usb, display, expression);
+                             usb_transport, usb, display, expression, watchdog_reset);
   (void)runtime.initialize();
   while (true) {
     usb.service(dispatcher);
     runtime.tick(to_ms_since_boot(get_absolute_time()));
     ports.midi().service();
+    watchdog.feed();
     tight_loop_contents();
   }
 }

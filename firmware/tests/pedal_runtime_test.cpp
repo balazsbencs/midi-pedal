@@ -31,7 +31,11 @@ class FakeSwitches final : public midi::RuntimeSwitchSource {
 class FakeExpression final : public midi::RuntimeExpressionSource {
  public:
   std::uint16_t value{2048};
-  std::uint16_t read_adc() const override { return value; }
+  mutable std::uint32_t reads{};
+  std::uint16_t read_adc() const override {
+    ++reads;
+    return value;
+  }
 };
 
 class FakeMidi final : public midi::MidiPort {
@@ -170,4 +174,89 @@ TEST(PedalRuntime, MissingImageStartsSafeEmptyWithoutBlockingTheDevice) {
   EXPECT_FALSE(display.views.back().configurationError);
   EXPECT_FALSE(display.views.back().expressionAvailable);
   EXPECT_EQ(display.views.back().positions, (std::array<std::uint8_t, 4>{1, 1, 1, 1}));
+}
+
+TEST(PedalRuntime, SamplesExpressionOnlyOnceForRepeatedTimestamp) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression);
+
+  ASSERT_TRUE(runtime.initialize());
+  runtime.tick(100);
+  runtime.tick(100);
+  runtime.tick(100);
+
+  EXPECT_EQ(expression_input.reads, 1U);
+}
+
+TEST(PedalRuntime, ResumesExpressionSamplingAtTheNextMillisecondAfterDelay) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression);
+
+  ASSERT_TRUE(runtime.initialize());
+  runtime.tick(100);
+  runtime.tick(135);
+  runtime.tick(135);
+  runtime.tick(136);
+
+  EXPECT_EQ(expression_input.reads, 3U);
+}
+
+TEST(PedalRuntime, SamplesExpressionAcrossMillisecondClockWraparound) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression);
+
+  ASSERT_TRUE(runtime.initialize());
+  runtime.tick(UINT32_MAX);
+  runtime.tick(0);
+
+  EXPECT_EQ(expression_input.reads, 2U);
+}
+
+TEST(PedalRuntime, RendersWatchdogResetDiagnosticWhenBootReportedOne) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression,
+                             true);
+
+  ASSERT_TRUE(runtime.initialize());
+  EXPECT_TRUE(display.views.back().watchdogReset);
 }

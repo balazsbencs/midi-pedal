@@ -34,6 +34,7 @@ add_library(pico_hal
   src/hal/pico_relays.cpp
   src/hal/pico_switches.cpp
   src/hal/pico_uart_midi.cpp
+  src/hal/pico_watchdog.cpp
   src/display/st7796s.cpp
 )
 target_include_directories(pico_hal PUBLIC src)
@@ -110,7 +111,7 @@ if(MIDI_PEDAL_BUILD_FIRMWARE)
     VERBATIM
   )
   add_executable(midi_pedal src/main.cpp src/usb/pico_usb_device.cpp ${FACTORY_IMAGE_OBJECT})
-  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core tinyusb_device pico_stdlib pico_unique_id hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma)
+  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core tinyusb_device pico_stdlib pico_unique_id hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma hardware_watchdog)
   target_include_directories(midi_pedal PRIVATE src)
   target_compile_definitions(midi_pedal PRIVATE PICO_ON_DEVICE=1)
   pico_enable_stdio_usb(midi_pedal 0)

@@ -8,6 +8,7 @@
 #include "hal/pico_relays.hpp"
 #include "hal/pico_switches.hpp"
 #include "hal/pico_uart_midi.hpp"
+#include "hal/pico_watchdog.hpp"
 
 TEST(PicoHalContract, UsesApprovedPinsAndElectricalDefaults) {
   EXPECT_EQ(midi::board::SwitchA, 2U);
@@ -24,4 +25,13 @@ TEST(PicoHalContract, UsesApprovedPinsAndElectricalDefaults) {
 TEST(PicoHalContract, SwitchMaskUsesStableBitOrder) {
   EXPECT_EQ(midi::PicoSwitches::mask_for_index(0), 0x01U);
   EXPECT_EQ(midi::PicoSwitches::mask_for_index(3), 0x08U);
+}
+
+TEST(PicoHalContract, WatchdogIsSafeToInitializeOnTheHost) {
+  midi::PicoWatchdog watchdog;
+
+  EXPECT_EQ(midi::PicoWatchdog::TimeoutMs, 2000U);
+  EXPECT_FALSE(watchdog.initialize());
+  watchdog.feed();
+  watchdog.feed();
 }

@@ -7,7 +7,7 @@ namespace midi {
 PedalRuntime::PedalRuntime(RuntimeConfigSource& config, RuntimeSwitchSource& switches,
                            RuntimeExpressionSource& expression_input, MidiPort& trs_midi, RelayPort& relays,
                            usb::UsbTransport& usb_midi, usb::UsbPort& usb_port, DisplayPort& display,
-                           ExpressionProcessor& expression)
+                           ExpressionProcessor& expression, bool watchdog_reset)
     : config_(config),
       switches_(switches),
       expression_input_(expression_input),
@@ -17,6 +17,7 @@ PedalRuntime::PedalRuntime(RuntimeConfigSource& config, RuntimeSwitchSource& swi
       usb_port_(usb_port),
       display_(display),
       expression_(expression),
+      watchdog_reset_(watchdog_reset),
       actions_(*this) {}
 
 bool PedalRuntime::initialize() {
@@ -27,6 +28,7 @@ bool PedalRuntime::initialize() {
   bank_index_ = 0;
   page_index_ = 0;
   have_view_ = false;
+  have_expression_schedule_ = false;
   usb_dropped_midi_ = usb_midi_.dropped_midi();
   config_snapshot_ = config_.status();
   const auto loaded = reload_bank();
@@ -107,8 +109,10 @@ void PedalRuntime::tick(std::uint32_t now_ms) {
   const auto events = switch_engine_.update(switches_.read_mask(), now_ms);
   for (const auto& event : events) handle_event(event);
 
-  if (const auto message = expression_.sample(expression_input_.read_adc(), now_ms); message.has_value()) {
-    if (!send_midi(expression_.assignment().destination, *message)) queue_overflow_ = true;
+  if (expression_sample_due(now_ms)) {
+    if (const auto message = expression_.sample(expression_input_.read_adc(), now_ms); message.has_value()) {
+      if (!send_midi(expression_.assignment().destination, *message)) queue_overflow_ = true;
+    }
   }
   const auto dropped = usb_midi_.dropped_midi();
   if (dropped != usb_dropped_midi_) {
@@ -116,6 +120,18 @@ void PedalRuntime::tick(std::uint32_t now_ms) {
     queue_overflow_ = true;
   }
   render();
+}
+
+bool PedalRuntime::expression_sample_due(std::uint32_t now_ms) {
+  if (have_expression_schedule_ &&
+      static_cast<std::uint32_t>(now_ms - next_expression_sample_at_) >= 0x80000000u) {
+    return false;
+  }
+  have_expression_schedule_ = true;
+  // Rescheduling from the current sample intentionally skips missed periods:
+  // a late main loop never issues a burst of ADC reads.
+  next_expression_sample_at_ = now_ms + 1u;
+  return true;
 }
 
 bool PedalRuntime::send_midi(Destination destination, MidiMessage message) {
@@ -172,7 +188,7 @@ bool PedalRuntime::same_view(const LiveView& left, const LiveView& right) {
   return left.bank == right.bank && left.page == right.page && left.positions == right.positions &&
          left.expressionAvailable == right.expressionAvailable && left.expressionValue == right.expressionValue &&
          left.usbConnected == right.usbConnected && left.configurationError == right.configurationError &&
-         left.queueOverflow == right.queueOverflow;
+         left.queueOverflow == right.queueOverflow && left.watchdogReset == right.watchdogReset;
 }
 
 void PedalRuntime::render() {
@@ -191,6 +207,7 @@ void PedalRuntime::render() {
   view.usbConnected = usb_port_.mounted();
   view.configurationError = configuration_error_;
   view.queueOverflow = queue_overflow_;
+  view.watchdogReset = watchdog_reset_;
   if (!have_view_ || !same_view(last_view_, view)) display_.present(view);
   last_view_ = view;
   have_view_ = true;
