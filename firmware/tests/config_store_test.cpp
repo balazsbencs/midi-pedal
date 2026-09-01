@@ -11,6 +11,7 @@
 
 #include "core/config_store.hpp"
 #include "core/crc32.hpp"
+#include "core/expression.hpp"
 
 namespace {
 class FakeFlash final : public midi::FlashPort {
@@ -125,4 +126,54 @@ TEST(ConfigStore, PowerCutBeforeActivationKeepsPreviousSlot) {
     ASSERT_TRUE(info.has_value());
     EXPECT_EQ(info->sequence, 1U);
   }
+}
+
+TEST(ConfigStore, PersistsExpressionCalibrationWithoutAnActiveImageAcrossReboot) {
+  FakeFlash flash;
+  midi::ConfigStore first(flash);
+
+  EXPECT_EQ(first.expression_calibration().heel, 0U);
+  EXPECT_EQ(first.expression_calibration().toe, 4095U);
+  ASSERT_TRUE(first.set_expression_calibration({120, 3900}));
+
+  midi::ConfigStore rebooted(flash);
+  EXPECT_EQ(rebooted.expression_calibration().heel, 120U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+  EXPECT_FALSE(rebooted.active_info().has_value());
+}
+
+TEST(ConfigStore, KeepsExpressionCalibrationWhenActivatingANewImage) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  const auto image = fixture();
+  upload_and_activate(store, image, 1);
+  ASSERT_TRUE(store.set_expression_calibration({180, 3800}));
+  auto newer = image;
+  newer[12] = std::byte{2};
+  const auto crc = midi::crc32_with_zeroed_range(newer, 28, 4);
+  newer[28] = static_cast<std::byte>(crc & 0xffu);
+  newer[29] = static_cast<std::byte>((crc >> 8u) & 0xffu);
+  newer[30] = static_cast<std::byte>((crc >> 16u) & 0xffu);
+  newer[31] = static_cast<std::byte>((crc >> 24u) & 0xffu);
+
+  upload_and_activate(store, newer, 2);
+
+  midi::ConfigStore rebooted(flash);
+  ASSERT_TRUE(rebooted.active_info().has_value());
+  EXPECT_EQ(rebooted.active_info()->sequence, 2U);
+  EXPECT_EQ(rebooted.expression_calibration().heel, 180U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
+}
+
+TEST(ConfigStore, PowerCutDuringCalibrationWriteKeepsThePreviousCalibration) {
+  FakeFlash flash;
+  midi::ConfigStore first(flash);
+  ASSERT_TRUE(first.set_expression_calibration({100, 3900}));
+
+  flash.fail_after(0);
+  EXPECT_FALSE(first.set_expression_calibration({300, 3700}));
+
+  midi::ConfigStore rebooted(flash);
+  EXPECT_EQ(rebooted.expression_calibration().heel, 100U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
 }

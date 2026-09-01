@@ -11,6 +11,8 @@
 
 namespace midi {
 
+class LiveActionState;
+
 class ExpressionSampleInput {
  public:
   virtual ~ExpressionSampleInput() = default;
@@ -33,6 +35,7 @@ class ControllerProtocolService final : public usb::ProtocolService {
   usb::ServiceError expression_sample(std::uint16_t& value) override;
   usb::ServiceError set_expression_calibration(std::uint16_t heel, std::uint16_t toe) override;
   usb::ServiceError factory_empty_reset() override;
+  void set_live_action_state(const LiveActionState* state) { live_action_state_ = state; }
 
  private:
   static bool append_text(std::span<std::byte> output, std::size_t& at, std::string_view text);
@@ -43,6 +46,7 @@ class ControllerProtocolService final : public usb::ProtocolService {
   ExpressionSampleInput& expression_input_;
   ExpressionProcessor& expression_;
   std::span<const std::byte> factory_image_{};
+  const LiveActionState* live_action_state_{};
 };
 
 }  // namespace midi

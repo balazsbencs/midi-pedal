@@ -95,11 +95,20 @@ void PedalRuntime::handle_chord(Chord chord) {
 }
 
 void PedalRuntime::handle_event(const SwitchEvent& event) {
+  if (event.kind == SwitchEventKind::ChordRelease) return;
+  struct ResetLiveAction final {
+    bool& active;
+    ~ResetLiveAction() { active = false; }
+  };
   if (event.kind == SwitchEventKind::ChordPress || event.kind == SwitchEventKind::ChordRepeat) {
+    live_action_active_ = true;
+    const ResetLiveAction reset{live_action_active_};
     handle_chord(event.chord);
     return;
   }
-  if (event.kind == SwitchEventKind::ChordRelease || !bank_loaded_) return;
+  if (!bank_loaded_) return;
+  live_action_active_ = true;
+  const ResetLiveAction reset{live_action_active_};
   const auto result = actions_.execute(current_preset(event.switch_id), engine_state_, event);
   if (!result.accepted) queue_overflow_ = true;
 }

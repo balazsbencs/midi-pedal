@@ -41,8 +41,11 @@ class FakeExpression final : public midi::RuntimeExpressionSource {
 class FakeMidi final : public midi::MidiPort {
  public:
   struct Sent { midi::Destination destination{}; midi::MidiMessage message{}; };
+  const midi::LiveActionState* action_state{};
+  bool observed_live_action{};
   std::vector<Sent> sent;
   bool enqueue(midi::Destination destination, midi::MidiMessage message) override {
+    observed_live_action = action_state != nullptr && action_state->live_action_active();
     sent.push_back({destination, message});
     return true;
   }
@@ -259,4 +262,29 @@ TEST(PedalRuntime, RendersWatchdogResetDiagnosticWhenBootReportedOne) {
 
   ASSERT_TRUE(runtime.initialize());
   EXPECT_TRUE(display.views.back().watchdogReset);
+}
+
+TEST(PedalRuntime, ReportsLiveActionOnlyWhileExecutingASwitchAction) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression);
+  trs.action_state = &runtime;
+
+  ASSERT_TRUE(runtime.initialize());
+  EXPECT_FALSE(runtime.live_action_active());
+  switches.mask = 0x01;
+  runtime.tick(0);
+  runtime.tick(35);
+
+  EXPECT_TRUE(trs.observed_live_action);
+  EXPECT_FALSE(runtime.live_action_active());
 }

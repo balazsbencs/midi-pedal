@@ -7,6 +7,7 @@
 #include <span>
 
 #include "config_types.hpp"
+#include "expression.hpp"
 
 namespace midi {
 
@@ -47,6 +48,8 @@ class ConfigStore {
   bool activate_upload();
   bool load_bank(std::uint8_t bank_index, BankConfig& output) const;
   bool read_active_bank_record(std::uint8_t bank_index, std::span<std::byte> output, std::size_t& size) const;
+  [[nodiscard]] Calibration expression_calibration() const { return expression_calibration_; }
+  bool set_expression_calibration(Calibration calibration);
 
  private:
   struct Upload {
@@ -67,10 +70,21 @@ class ConfigStore {
     std::uint32_t image_crc32{};
   };
 
+  struct Settings {
+    bool valid{};
+    std::uint32_t generation{};
+    Calibration calibration{};
+  };
+
   void scan();
   Metadata read_metadata(std::uint8_t index) const;
+  Settings read_settings(std::uint8_t index) const;
   bool image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const;
   bool write_metadata(std::uint8_t index, const Metadata& metadata);
+  bool write_sector(std::uint8_t index, const Metadata& metadata, const Settings& settings);
+  static void write_metadata_record(std::span<std::byte> bytes, const Metadata& metadata);
+  static void write_settings_record(std::span<std::byte> bytes, const Settings& settings);
+  static bool valid_calibration(Calibration calibration);
   static std::uint32_t slot_offset(std::uint8_t slot) { return slot == 0 ? SlotAOffset : SlotBOffset; }
   static std::uint32_t metadata_offset(std::uint8_t index) { return index == 0 ? MetadataAOffset : MetadataBOffset; }
   static bool newer(std::uint32_t left, std::uint32_t right) { return static_cast<std::int32_t>(left - right) > 0; }
@@ -78,6 +92,8 @@ class ConfigStore {
   FlashPort& flash_;
   std::optional<ActiveImageInfo> active_;
   std::array<Metadata, 2> metadata_{};
+  std::array<Settings, 2> settings_{};
+  Calibration expression_calibration_{0, 4095};
   std::uint8_t active_metadata_index_{};
   Upload upload_{};
 };

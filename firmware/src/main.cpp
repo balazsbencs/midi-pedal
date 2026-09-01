@@ -109,7 +109,7 @@ int main() {
   controller.initialize();
 
   PicoExpressionInput expression_input(ports.expression());
-  midi::ExpressionProcessor expression({0, 4095});
+  midi::ExpressionProcessor expression(config.expression_calibration());
   const auto factory_start = reinterpret_cast<std::uintptr_t>(_binary_firmware_defaults_factory_empty_bin_start);
   const auto factory_end = reinterpret_cast<std::uintptr_t>(_binary_firmware_defaults_factory_empty_bin_end);
   const auto factory_size = factory_end >= factory_start ? static_cast<std::size_t>(factory_end - factory_start) : 0;
@@ -125,6 +125,7 @@ int main() {
   midi::usb::UsbTransport usb_transport(usb);
   midi::PedalRuntime runtime(config_source, switch_input, expression_input, ports.midi(), ports.relays(),
                              usb_transport, usb, display, expression, watchdog_reset);
+  protocol.set_live_action_state(&runtime);
   (void)runtime.initialize();
   while (true) {
     usb.service(dispatcher);

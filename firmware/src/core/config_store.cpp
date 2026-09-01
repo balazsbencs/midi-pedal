@@ -9,6 +9,8 @@
 namespace midi {
 namespace {
 constexpr std::size_t MetadataSize = 32;
+constexpr std::size_t SettingsSize = 32;
+constexpr std::size_t SettingsOffset = MetadataSize;
 
 void put_u16(std::span<std::byte> bytes, std::size_t at, std::uint16_t value) {
   bytes[at] = static_cast<std::byte>(value & 0xffu);
@@ -29,7 +31,32 @@ std::uint32_t get_u32(std::span<const std::byte> bytes, std::size_t at) {
     (std::to_integer<unsigned char>(bytes[at + 2]) << 16u) |
     (std::to_integer<unsigned char>(bytes[at + 3]) << 24u));
 }
+
 }  // namespace
+
+void ConfigStore::write_metadata_record(std::span<std::byte> bytes, const Metadata& metadata) {
+  if (!metadata.valid) return;
+  std::fill(bytes.begin(), bytes.end(), std::byte{0});
+  bytes[0] = std::byte{'M'}; bytes[1] = std::byte{'P'}; bytes[2] = std::byte{'M'}; bytes[3] = std::byte{'D'};
+  put_u16(bytes, 4, 1);
+  put_u32(bytes, 8, metadata.generation);
+  bytes[12] = static_cast<std::byte>(metadata.slot);
+  put_u32(bytes, 16, metadata.sequence);
+  put_u32(bytes, 20, metadata.image_size);
+  put_u32(bytes, 24, metadata.image_crc32);
+  put_u32(bytes, 28, crc32_with_zeroed_range(bytes, 28, 4));
+}
+
+void ConfigStore::write_settings_record(std::span<std::byte> bytes, const Settings& settings) {
+  if (!settings.valid) return;
+  std::fill(bytes.begin(), bytes.end(), std::byte{0});
+  bytes[0] = std::byte{'M'}; bytes[1] = std::byte{'P'}; bytes[2] = std::byte{'S'}; bytes[3] = std::byte{'T'};
+  put_u16(bytes, 4, 1);
+  put_u32(bytes, 8, settings.generation);
+  put_u16(bytes, 12, settings.calibration.heel);
+  put_u16(bytes, 14, settings.calibration.toe);
+  put_u32(bytes, 28, crc32_with_zeroed_range(bytes, 28, 4));
+}
 
 ConfigStore::ConfigStore(FlashPort& flash) : flash_(flash) { scan(); }
 
@@ -49,6 +76,23 @@ ConfigStore::Metadata ConfigStore::read_metadata(std::uint8_t index) const {
   return metadata;
 }
 
+ConfigStore::Settings ConfigStore::read_settings(std::uint8_t index) const {
+  std::array<std::byte, SettingsSize> bytes{};
+  flash_.read(metadata_offset(index) + SettingsOffset, bytes);
+  Settings settings{};
+  if (std::to_integer<char>(bytes[0]) != 'M' || std::to_integer<char>(bytes[1]) != 'P' ||
+      std::to_integer<char>(bytes[2]) != 'S' || std::to_integer<char>(bytes[3]) != 'T') return settings;
+  if (get_u16(bytes, 4) != 1 || get_u32(bytes, 28) != crc32_with_zeroed_range(bytes, 28, 4)) return settings;
+  settings.generation = get_u32(bytes, 8);
+  settings.calibration = {get_u16(bytes, 12), get_u16(bytes, 14)};
+  settings.valid = valid_calibration(settings.calibration);
+  return settings;
+}
+
+bool ConfigStore::valid_calibration(Calibration calibration) {
+  return calibration.toe > calibration.heel && calibration.toe - calibration.heel >= 410u && calibration.toe <= 4095u;
+}
+
 bool ConfigStore::image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const {
   if (slot > 1 || image_size < 32 || image_size > SlotSize || image_size > MaxImageSize) return false;
   const auto* mapped = flash_.mapped(slot_offset(slot), image_size);
@@ -66,6 +110,16 @@ bool ConfigStore::image_valid(std::uint8_t slot, std::uint32_t image_size, std::
 void ConfigStore::scan() {
   metadata_[0] = read_metadata(0);
   metadata_[1] = read_metadata(1);
+  settings_[0] = read_settings(0);
+  settings_[1] = read_settings(1);
+  std::optional<std::uint8_t> selected_settings;
+  for (std::uint8_t index = 0; index < 2; ++index) {
+    if (!settings_[index].valid) continue;
+    if (!selected_settings.has_value() || newer(settings_[index].generation, settings_[*selected_settings].generation)) {
+      selected_settings = index;
+    }
+  }
+  expression_calibration_ = selected_settings.has_value() ? settings_[*selected_settings].calibration : Calibration{0, 4095};
   active_.reset();
   std::optional<std::uint8_t> selected;
   for (std::uint8_t index = 0; index < 2; ++index) {
@@ -102,18 +156,38 @@ bool ConfigStore::verify_upload() {
 }
 
 bool ConfigStore::write_metadata(std::uint8_t index, const Metadata& metadata) {
-  std::array<std::byte, MetadataSize> bytes{};
-  bytes.fill(std::byte{0});
-  bytes[0] = std::byte{'M'}; bytes[1] = std::byte{'P'}; bytes[2] = std::byte{'M'}; bytes[3] = std::byte{'D'};
-  put_u16(bytes, 4, 1);
-  put_u32(bytes, 8, metadata.generation);
-  bytes[12] = static_cast<std::byte>(metadata.slot);
-  put_u32(bytes, 16, metadata.sequence);
-  put_u32(bytes, 20, metadata.image_size);
-  put_u32(bytes, 24, metadata.image_crc32);
-  put_u32(bytes, 28, crc32_with_zeroed_range(bytes, 28, 4));
+  return write_sector(index, metadata, settings_[index]);
+}
+
+bool ConfigStore::write_sector(std::uint8_t index, const Metadata& metadata, const Settings& settings) {
+  std::array<std::byte, MetadataSize + SettingsSize> bytes{};
+  bytes.fill(std::byte{0xff});
+  write_metadata_record(std::span<std::byte>(bytes.data(), MetadataSize), metadata);
+  write_settings_record(std::span<std::byte>(bytes.data() + SettingsOffset, SettingsSize), settings);
   if (!flash_.erase(metadata_offset(index), MetadataSectorSize)) return false;
   return flash_.program(metadata_offset(index), bytes);
+}
+
+bool ConfigStore::set_expression_calibration(Calibration calibration) {
+  if (!valid_calibration(calibration)) return false;
+  std::optional<std::uint8_t> selected;
+  for (std::uint8_t index = 0; index < 2; ++index) {
+    if (settings_[index].valid &&
+        (!selected.has_value() || newer(settings_[index].generation, settings_[*selected].generation))) selected = index;
+  }
+  const auto target = selected.has_value() ? static_cast<std::uint8_t>(*selected ^ 1u) : 0u;
+  const auto next_generation = selected.has_value() ? settings_[*selected].generation + 1u : 1u;
+  const Settings next{true, next_generation, calibration};
+
+  const auto other = static_cast<std::uint8_t>(target ^ 1u);
+  if (metadata_[target].valid && !metadata_[other].valid) {
+    if (!write_sector(other, metadata_[target], settings_[other])) return false;
+    metadata_[other] = metadata_[target];
+  }
+  if (!write_sector(target, metadata_[target], next)) return false;
+  settings_[target] = next;
+  expression_calibration_ = calibration;
+  return true;
 }
 
 bool ConfigStore::activate_upload() {

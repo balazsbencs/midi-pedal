@@ -5,6 +5,7 @@
 #include <string_view>
 
 #include "../core/image_reader.hpp"
+#include "pedal_runtime.hpp"
 
 namespace midi {
 
@@ -61,18 +62,22 @@ usb::ServiceError ControllerProtocolService::read_config(std::uint8_t bank_index
 }
 
 usb::ServiceError ControllerProtocolService::begin_upload(std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) {
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
   return upload_error(store_.begin_upload(image_size, sequence, image_crc32));
 }
 
 usb::ServiceError ControllerProtocolService::write_chunk(std::uint32_t offset, std::span<const std::byte> bytes) {
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
   return upload_error(store_.write_chunk(offset, bytes));
 }
 
 usb::ServiceError ControllerProtocolService::verify_upload() {
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
   return store_.verify_upload() ? usb::ServiceError::None : usb::ServiceError::VerifyFailed;
 }
 
 usb::ServiceError ControllerProtocolService::activate_upload() {
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
   return store_.activate_upload() ? usb::ServiceError::None : usb::ServiceError::InvalidState;
 }
 
@@ -82,10 +87,14 @@ usb::ServiceError ControllerProtocolService::expression_sample(std::uint16_t& va
 }
 
 usb::ServiceError ControllerProtocolService::set_expression_calibration(std::uint16_t heel, std::uint16_t toe) {
-  return expression_.set_calibration({heel, toe}) ? usb::ServiceError::None : usb::ServiceError::InvalidConfiguration;
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
+  const Calibration calibration{heel, toe};
+  if (!store_.set_expression_calibration(calibration)) return usb::ServiceError::InvalidConfiguration;
+  return expression_.set_calibration(calibration) ? usb::ServiceError::None : usb::ServiceError::InvalidConfiguration;
 }
 
 usb::ServiceError ControllerProtocolService::factory_empty_reset() {
+  if (live_action_state_ != nullptr && live_action_state_->live_action_active()) return usb::ServiceError::Busy;
   if (factory_image_.empty()) return usb::ServiceError::InvalidState;
   const auto image = ImageReader(factory_image_).inspect();
   if (image.error != ImageError::None) return usb::ServiceError::InvalidConfiguration;

@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <span>
 #include <string>
 #include <vector>
@@ -11,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "app/controller_protocol_service.hpp"
+#include "app/pedal_runtime.hpp"
 #include "core/config_store.hpp"
 #include "core/crc32.hpp"
 #include "core/expression.hpp"
@@ -22,11 +24,13 @@ class FakeFlash final : public midi::FlashPort {
   FakeFlash() : bytes(Size, std::byte{0xff}) {}
 
   bool erase(std::uint32_t offset, std::size_t length) override {
+    if (should_fail()) return false;
     if (offset + length > bytes.size()) return false;
     std::fill(bytes.begin() + offset, bytes.begin() + offset + length, std::byte{0xff});
     return true;
   }
   bool program(std::uint32_t offset, std::span<const std::byte> data) override {
+    if (should_fail()) return false;
     if (offset + data.size() > bytes.size()) return false;
     for (std::size_t index = 0; index < data.size(); ++index) bytes[offset + index] &= data[index];
     return true;
@@ -39,13 +43,26 @@ class FakeFlash final : public midi::FlashPort {
     return offset + length <= bytes.size() ? bytes.data() + offset : nullptr;
   }
 
+  void fail_after(std::size_t operation) { fail_at = operation; operations = 0; }
+
   std::vector<std::byte> bytes;
+
+ private:
+  bool should_fail() { return fail_at.has_value() && operations++ >= *fail_at; }
+  std::optional<std::size_t> fail_at;
+  std::size_t operations{};
 };
 
 class FakeExpressionInput final : public midi::ExpressionSampleInput {
  public:
   std::uint16_t value{2048};
   std::uint16_t read_adc() const override { return value; }
+};
+
+class FakeLiveAction final : public midi::LiveActionState {
+ public:
+  bool active{};
+  bool live_action_active() const override { return active; }
 };
 
 std::vector<std::byte> fixture() {
@@ -142,4 +159,52 @@ TEST(ControllerProtocolService, FactoryResetValidatesAndActivatesEmbeddedImage) 
   EXPECT_EQ(info->image_size, image.size());
   EXPECT_EQ(info->image_crc32, u32(image, 28));
   EXPECT_EQ(info->bank_count, 128U);
+}
+
+TEST(ControllerProtocolService, RefusesMutationsWhileALiveActionIsExecuting) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  FakeExpressionInput input;
+  midi::ExpressionProcessor expression({0, 4095});
+  const auto image = fixture();
+  midi::ControllerProtocolService service(store, input, expression, image);
+  FakeLiveAction action;
+  service.set_live_action_state(&action);
+  action.active = true;
+  const std::array<std::byte, 1> chunk{std::byte{0}};
+
+  EXPECT_EQ(service.begin_upload(100, 1, 0), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(service.write_chunk(0, chunk), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(service.verify_upload(), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(service.activate_upload(), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(service.factory_empty_reset(), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(service.set_expression_calibration(100, 3900), midi::usb::ServiceError::Busy);
+  EXPECT_EQ(expression.calibration().heel, 0U);
+  EXPECT_EQ(expression.calibration().toe, 4095U);
+}
+
+TEST(ControllerProtocolService, CommitsCalibrationBeforeChangingTheExpressionProcessor) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  FakeExpressionInput input;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::ControllerProtocolService service(store, input, expression);
+
+  ASSERT_EQ(service.set_expression_calibration(100, 3900), midi::usb::ServiceError::None);
+  midi::ConfigStore rebooted(flash);
+  EXPECT_EQ(rebooted.expression_calibration().heel, 100U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+}
+
+TEST(ControllerProtocolService, DoesNotChangeExpressionCalibrationWhenPersistenceFails) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  FakeExpressionInput input;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::ControllerProtocolService service(store, input, expression);
+
+  flash.fail_after(0);
+  EXPECT_EQ(service.set_expression_calibration(100, 3900), midi::usb::ServiceError::InvalidConfiguration);
+  EXPECT_EQ(expression.calibration().heel, 0U);
+  EXPECT_EQ(expression.calibration().toe, 4095U);
 }

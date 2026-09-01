@@ -36,7 +36,13 @@ class RuntimeExpressionSource {
   [[nodiscard]] virtual std::uint16_t read_adc() const = 0;
 };
 
-class PedalRuntime final : public ActionSink {
+class LiveActionState {
+ public:
+  virtual ~LiveActionState() = default;
+  [[nodiscard]] virtual bool live_action_active() const = 0;
+};
+
+class PedalRuntime final : public ActionSink, public LiveActionState {
  public:
   PedalRuntime(RuntimeConfigSource& config, RuntimeSwitchSource& switches, RuntimeExpressionSource& expression_input,
                MidiPort& trs_midi, RelayPort& relays, usb::UsbTransport& usb_midi, usb::UsbPort& usb_port,
@@ -44,6 +50,7 @@ class PedalRuntime final : public ActionSink {
 
   [[nodiscard]] bool initialize();
   void tick(std::uint32_t now_ms);
+  [[nodiscard]] bool live_action_active() const override { return live_action_active_; }
 
   bool send_midi(Destination destination, MidiMessage message) override;
   bool relay(RelayCommand command) override;
@@ -85,6 +92,7 @@ class PedalRuntime final : public ActionSink {
   std::uint32_t usb_dropped_midi_{};
   LiveView last_view_{};
   bool have_view_{};
+  bool live_action_active_{};
 };
 
 }  // namespace midi
