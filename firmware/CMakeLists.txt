@@ -11,6 +11,7 @@ add_library(midi_core
   src/core/image_reader.cpp
   src/core/switch_engine.cpp
   src/core/action_engine.cpp
+  src/core/expression.cpp
   src/app/controller.cpp
 )
 target_include_directories(midi_core PUBLIC src)
@@ -32,6 +33,9 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(action_engine_test tests/action_engine_test.cpp)
   target_link_libraries(action_engine_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(expression_test tests/expression_test.cpp)
+  target_link_libraries(expression_test PRIVATE midi_core GTest::gtest_main)
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
@@ -51,4 +55,5 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(switch_engine_test)
   gtest_discover_tests(midi_queue_test)
   gtest_discover_tests(action_engine_test)
+  gtest_discover_tests(expression_test)
 endif()
