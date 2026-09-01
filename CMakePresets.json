@@ -19,7 +19,8 @@
       "binaryDir": "${sourceDir}/build/pico2-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "MIDI_PEDAL_BUILD_FIRMWARE": "ON"
+        "MIDI_PEDAL_BUILD_FIRMWARE": "ON",
+        "PICO_BOARD": "pico2"
       }
     }
   ],

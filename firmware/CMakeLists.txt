@@ -2,18 +2,39 @@ cmake_minimum_required(VERSION 3.25)
 
 option(MIDI_PEDAL_BUILD_FIRMWARE "Build firmware targets" OFF)
 
-include(${CMAKE_SOURCE_DIR}/cmake/GoogleTest.cmake)
+if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
+  include(${CMAKE_SOURCE_DIR}/cmake/GoogleTest.cmake)
+endif()
 
 add_library(midi_core
   src/core/crc32.cpp
   src/core/image_reader.cpp
+  src/app/controller.cpp
 )
 target_include_directories(midi_core PUBLIC src)
 target_compile_features(midi_core PUBLIC cxx_std_20)
 
-add_executable(image_reader_test tests/image_reader_test.cpp)
-target_link_libraries(image_reader_test PRIVATE midi_core GTest::gtest_main)
-target_compile_definitions(image_reader_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
+  add_executable(image_reader_test tests/image_reader_test.cpp)
+  target_link_libraries(image_reader_test PRIVATE midi_core GTest::gtest_main)
+  target_compile_definitions(image_reader_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
-include(GoogleTest)
-gtest_discover_tests(image_reader_test)
+  add_executable(controller_boot_test tests/controller_boot_test.cpp)
+  target_link_libraries(controller_boot_test PRIVATE midi_core GTest::gtest_main)
+endif()
+
+if(MIDI_PEDAL_BUILD_FIRMWARE)
+  add_executable(midi_pedal src/main.cpp)
+  target_link_libraries(midi_pedal PRIVATE midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync)
+  target_include_directories(midi_pedal PRIVATE src)
+  target_compile_definitions(midi_pedal PRIVATE PICO_ON_DEVICE=1)
+  pico_enable_stdio_usb(midi_pedal 1)
+  pico_enable_stdio_uart(midi_pedal 0)
+  pico_add_extra_outputs(midi_pedal)
+endif()
+
+if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
+  include(GoogleTest)
+  gtest_discover_tests(image_reader_test)
+  gtest_discover_tests(controller_boot_test)
+endif()
