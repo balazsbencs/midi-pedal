@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "../core/config_types.hpp"
+
 namespace midi {
 
 struct LiveView {
@@ -13,16 +15,6 @@ struct LiveView {
   bool expressionAvailable{};
   std::uint8_t expressionValue{};
 };
-
-struct MidiMessage {
-  std::array<std::uint8_t, 3> bytes{};
-  std::uint8_t length{};
-};
-
-// Defined by the shared configuration model. A forward declaration keeps the
-// HAL contracts lightweight while allowing ports and configuration to use the
-// same stable enum.
-enum class Destination : std::uint8_t;
 
 struct Clock {
   virtual ~Clock() = default;

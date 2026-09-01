@@ -6,6 +6,11 @@
 
 namespace midi {
 
+struct MidiMessage {
+  std::array<std::uint8_t, 3> bytes{};
+  std::uint8_t length{};
+};
+
 template <std::size_t Capacity>
 struct AsciiString {
   std::array<char, Capacity + 1> data{};
