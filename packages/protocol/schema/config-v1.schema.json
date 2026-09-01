@@ -1,0 +1,75 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midi-pedal.dev/schema/config-v1.json",
+  "type": "object",
+  "required": ["schemaVersion", "deviceModel", "banks"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "deviceModel": { "const": "MIDI_PEDAL_PICO2" },
+    "banks": { "type": "array", "maxItems": 128, "items": { "$ref": "#/$defs/bank" } }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "id": { "type": "integer", "minimum": 1, "maximum": 4294967295 },
+    "ascii20": { "type": "string", "maxLength": 20, "pattern": "^[\\x20-\\x7e]*$" },
+    "ascii12": { "type": "string", "maxLength": 12, "pattern": "^[\\x20-\\x7e]*$" },
+    "destination": { "enum": ["TRS", "USB", "BOTH"] },
+    "trigger": { "enum": ["PRESS", "RELEASE", "LONG_PRESS", "DOUBLE_TAP"] },
+    "position": { "enum": ["POSITION_1", "POSITION_2", "BOTH"] },
+    "view": {
+      "type": "object",
+      "required": ["label", "accentRgb565"],
+      "properties": { "label": { "$ref": "#/$defs/ascii12" }, "accentRgb565": { "type": "integer", "minimum": 0, "maximum": 65535 } },
+      "additionalProperties": false
+    },
+    "message": {
+      "oneOf": [
+        {
+          "type": "object", "required": ["type", "channel", "program", "destination"],
+          "properties": { "type": { "const": "PC" }, "channel": { "type": "integer", "minimum": 1, "maximum": 16 }, "program": { "type": "integer", "minimum": 0, "maximum": 127 }, "destination": { "$ref": "#/$defs/destination" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object", "required": ["type", "channel", "controller", "value", "destination"],
+          "properties": { "type": { "const": "CC" }, "channel": { "type": "integer", "minimum": 1, "maximum": 16 }, "controller": { "type": "integer", "minimum": 0, "maximum": 127 }, "value": { "type": "integer", "minimum": 0, "maximum": 127 }, "destination": { "$ref": "#/$defs/destination" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object", "required": ["type", "contact", "operation"],
+          "properties": { "type": { "const": "RELAY" }, "contact": { "enum": [1, 2] }, "operation": { "enum": ["OPEN", "CLOSE", "TOGGLE"] } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object", "required": ["type", "operation"],
+          "properties": { "type": { "const": "NAV" }, "operation": { "enum": ["BANK_UP", "BANK_DOWN", "BANK_SET", "PAGE_UP", "PAGE_DOWN", "PAGE_SET"] }, "target": { "type": "integer", "minimum": 1, "maximum": 128 } },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "slot": {
+      "type": "object", "required": ["id", "trigger", "position", "message"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "trigger": { "$ref": "#/$defs/trigger" }, "position": { "$ref": "#/$defs/position" }, "message": { "$ref": "#/$defs/message" } },
+      "additionalProperties": false
+    },
+    "preset": {
+      "type": "object", "required": ["id", "position1", "position2", "toggleOn", "slots"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "position1": { "$ref": "#/$defs/view" }, "position2": { "$ref": "#/$defs/view" }, "toggleOn": { "anyOf": [{ "$ref": "#/$defs/trigger" }, { "type": "null" }] }, "slots": { "type": "array", "maxItems": 8, "items": { "$ref": "#/$defs/slot" } } },
+      "additionalProperties": false
+    },
+    "page": {
+      "type": "object", "required": ["id", "presets"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "presets": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/preset" } } },
+      "additionalProperties": false
+    },
+    "expression": {
+      "type": "object", "required": ["enabled", "label", "channel", "controller", "destination", "minimum", "maximum", "inverted"],
+      "properties": { "enabled": { "type": "boolean" }, "label": { "$ref": "#/$defs/ascii12" }, "channel": { "type": "integer", "minimum": 1, "maximum": 16 }, "controller": { "type": "integer", "minimum": 0, "maximum": 127 }, "destination": { "$ref": "#/$defs/destination" }, "minimum": { "type": "integer", "minimum": 0, "maximum": 127 }, "maximum": { "type": "integer", "minimum": 0, "maximum": 127 }, "inverted": { "type": "boolean" } },
+      "additionalProperties": false
+    },
+    "bank": {
+      "type": "object", "required": ["id", "name", "pages", "expression"],
+      "properties": { "id": { "$ref": "#/$defs/id" }, "name": { "$ref": "#/$defs/ascii20" }, "pages": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "$ref": "#/$defs/page" } }, "expression": { "$ref": "#/$defs/expression" } },
+      "additionalProperties": false
+    }
+  }
+}

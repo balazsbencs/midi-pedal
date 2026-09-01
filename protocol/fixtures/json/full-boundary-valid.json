@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "deviceModel": "MIDI_PEDAL_PICO2",
+  "banks": [
+    {
+      "id": 1,
+      "name": "BANK-BOUNDARY-000001",
+      "pages": [
+        {
+          "id": 2,
+          "presets": [
+            {
+              "id": 10,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": [
+                {
+                  "id": 100,
+                  "trigger": "PRESS",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "PC",
+                    "channel": 16,
+                    "program": 127,
+                    "destination": "TRS"
+                  }
+                },
+                {
+                  "id": 101,
+                  "trigger": "RELEASE",
+                  "position": "POSITION_1",
+                  "message": {
+                    "type": "CC",
+                    "channel": 1,
+                    "controller": 0,
+                    "value": 0,
+                    "destination": "USB"
+                  }
+                },
+                {
+                  "id": 102,
+                  "trigger": "LONG_PRESS",
+                  "position": "POSITION_2",
+                  "message": {
+                    "type": "RELAY",
+                    "contact": 1,
+                    "operation": "TOGGLE"
+                  }
+                },
+                {
+                  "id": 103,
+                  "trigger": "DOUBLE_TAP",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "NAV",
+                    "operation": "BANK_SET",
+                    "target": 128
+                  }
+                },
+                {
+                  "id": 104,
+                  "trigger": "PRESS",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "NAV",
+                    "operation": "PAGE_SET",
+                    "target": 4
+                  }
+                },
+                {
+                  "id": 105,
+                  "trigger": "PRESS",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "RELAY",
+                    "contact": 2,
+                    "operation": "OPEN"
+                  }
+                },
+                {
+                  "id": 106,
+                  "trigger": "RELEASE",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "PC",
+                    "channel": 1,
+                    "program": 0,
+                    "destination": "BOTH"
+                  }
+                },
+                {
+                  "id": 107,
+                  "trigger": "LONG_PRESS",
+                  "position": "BOTH",
+                  "message": {
+                    "type": "CC",
+                    "channel": 16,
+                    "controller": 127,
+                    "value": 127,
+                    "destination": "BOTH"
+                  }
+                }
+              ]
+            },
+            {
+              "id": 11,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 12,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 13,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "presets": [
+            {
+              "id": 14,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 15,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 16,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 17,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            }
+          ]
+        },
+        {
+          "id": 4,
+          "presets": [
+            {
+              "id": 18,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 19,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 20,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 21,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "presets": [
+            {
+              "id": 22,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 23,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 24,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            },
+            {
+              "id": 25,
+              "position1": {
+                "label": "POSITION-ONE",
+                "accentRgb565": 0
+              },
+              "position2": {
+                "label": "POSITION-TWO",
+                "accentRgb565": 65535
+              },
+              "toggleOn": "DOUBLE_TAP",
+              "slots": []
+            }
+          ]
+        }
+      ],
+      "expression": {
+        "enabled": true,
+        "label": "EXPRESSION12",
+        "channel": 16,
+        "controller": 127,
+        "destination": "BOTH",
+        "minimum": 0,
+        "maximum": 127,
+        "inverted": true
+      }
+    }
+  ]
+}

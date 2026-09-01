@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "deviceModel": "MIDI_PEDAL_PICO2",
+  "banks": [
+    {
+      "id": 1,
+      "name": "Bad\nName",
+      "pages": [],
+      "expression": {
+        "enabled": false,
+        "label": "",
+        "channel": 1,
+        "controller": 128,
+        "destination": "BOTH",
+        "minimum": 0,
+        "maximum": 127,
+        "inverted": false
+      }
+    }
+  ]
+}
