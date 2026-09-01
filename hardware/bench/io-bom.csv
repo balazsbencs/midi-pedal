@@ -1,0 +1,9 @@
+ref,description,required_rating,manufacturer_part,status,notes
+J1,TRS Type-A MIDI OUT,3.5mm panel jack,TBD,TO_SELECT,Confirm tip/ring mapping
+J2,dual dry-contact relay TRS,3.5mm panel jack,TBD,TO_SELECT,Tip/contact1 ring/contact2
+J3,expression TRS,6.35mm panel jack,TBD,TO_SELECT,10–25k linear pedals
+K1,K2,mechanical relay 5V coil and isolated contacts,TBD,TO_SELECT,Normally open
+Q2,Q3,relay low-side drivers,logic-compatible,TBD,TO_SELECT,Default off
+U2,MIDI current-loop driver,3.3V compliant,TBD,TO_SELECT,Standards review required
+R/C,ADC protection and RC filter,3.3V logic,TBD,TO_SELECT,ESD and input limit
+

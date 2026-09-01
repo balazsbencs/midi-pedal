@@ -1,0 +1,3 @@
+timestamp,pedal_nominal_kohm,position,adc_raw,filtered_value,midi_value,connected,firmware_commit,evidence,status
+,,,,,,,,,PENDING
+

@@ -1,0 +1,7 @@
+ref,description,required_rating,manufacturer_part,status,notes
+F1,resettable input fuse,>=500mA hold at 9V,TBD,TO_SELECT,Select after load measurement
+Q1,reverse-polarity P-MOSFET,>=20V,>=2A,TBD,TO_SELECT,Verify body-diode orientation
+TVS1,transient suppressor,12V standoff,TBD,TO_SELECT,Clamp raw input
+U1,5V buck regulator,5V output and Pico load,TBD,TO_SELECT,Follow datasheet layout
+D1,USB ideal-diode/reverse-current stage,USB VBUS isolation,TBD,TO_SELECT,No backfeed
+

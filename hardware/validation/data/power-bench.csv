@@ -1,0 +1,3 @@
+timestamp,mode,vin_v,usb_v,protected_v,reg_5v,vsys_v,current_ma,reverse_current_ma,temp_rise_c,reset,operator,evidence,status
+,,,,,,,,,,,,,PENDING
+

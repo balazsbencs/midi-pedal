@@ -1,0 +1,16 @@
+component,measurement,nominal_mm,measured_mm,uncertainty_mm,instrument,status,notes
+1590DD,enclosure outside width,188,,,caliper,TO_MEASURE,Measure actual lid/body before panel drawing
+1590DD,enclosure outside depth,119.5,,,caliper,TO_MEASURE,Reference nominal only
+1590DD,usable internal height,33,,,depth gauge,TO_MEASURE,Include lid/rib clearances
+ST7796S,active width,70,,,caliper,TO_MEASURE,Measure the supplied module, not controller nominal
+ST7796S,active height,50,,,caliper,TO_MEASURE,Measure the supplied module
+ST7796S,PCB width,,,caliper,TO_MEASURE,Include header and mounting envelope
+Pico 2,board width,,,caliper,TO_MEASURE,Include socket/header keep-out
+Pico 2,board length,,,caliper,TO_MEASURE,USB connector must remain accessible
+footswitch,body diameter,,,caliper,TO_MEASURE,Record nut/washer envelope and 15 mm clearance
+footswitch,terminal insertion depth,,,depth gauge,TO_MEASURE,Allow cable bend radius
+MIDI TRS jack,panel hole diameter,,,caliper,TO_MEASURE,Type-A jack and nut stack
+relay TRS jack,panel hole diameter,,,caliper,TO_MEASURE,Label tip/ring contacts
+expression TRS jack,panel hole diameter,,,caliper,TO_MEASURE,6.35 mm jack
+DC jack,panel hole diameter,,,caliper,TO_MEASURE,Center-negative 9 V connector
+
