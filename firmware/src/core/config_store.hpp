@@ -1,0 +1,83 @@
+#pragma once
+
+#include <array>
+#include <cstddef>
+#include <cstdint>
+#include <optional>
+#include <span>
+
+#include "config_types.hpp"
+
+namespace midi {
+
+class FlashPort {
+ public:
+  virtual ~FlashPort() = default;
+  virtual bool erase(std::uint32_t offset, std::size_t length) = 0;
+  virtual bool program(std::uint32_t offset, std::span<const std::byte> data) = 0;
+  virtual void read(std::uint32_t offset, std::span<std::byte> output) const = 0;
+  virtual const std::byte* mapped(std::uint32_t offset, std::size_t length) const = 0;
+};
+
+struct ActiveImageInfo {
+  std::uint8_t slot{};
+  std::uint32_t generation{};
+  std::uint32_t sequence{};
+  std::uint32_t image_size{};
+  std::uint32_t image_crc32{};
+};
+
+class ConfigStore {
+ public:
+  static constexpr std::uint32_t SlotAOffset = 0x200000;
+  static constexpr std::uint32_t SlotBOffset = 0x2f0000;
+  static constexpr std::size_t SlotSize = 0xf0000;
+  static constexpr std::uint32_t MetadataAOffset = 0x3e0000;
+  static constexpr std::uint32_t MetadataBOffset = 0x3f0000;
+  static constexpr std::size_t MetadataSectorSize = 0x1000;
+  static constexpr std::size_t MaxImageSize = 768 * 1024;
+
+  explicit ConfigStore(FlashPort& flash);
+
+  [[nodiscard]] std::optional<ActiveImageInfo> active_info() const { return active_; }
+  bool begin_upload(std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32);
+  bool write_chunk(std::uint32_t offset, std::span<const std::byte> bytes);
+  bool verify_upload();
+  bool activate_upload();
+  bool load_bank(std::uint8_t bank_index, BankConfig& output) const;
+
+ private:
+  struct Upload {
+    bool active{};
+    bool verified{};
+    std::uint8_t slot{};
+    std::uint32_t image_size{};
+    std::uint32_t sequence{};
+    std::uint32_t image_crc32{};
+  };
+
+  struct Metadata {
+    bool valid{};
+    std::uint32_t generation{};
+    std::uint8_t slot{};
+    std::uint32_t sequence{};
+    std::uint32_t image_size{};
+    std::uint32_t image_crc32{};
+  };
+
+  void scan();
+  Metadata read_metadata(std::uint8_t index) const;
+  bool image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const;
+  bool write_metadata(std::uint8_t index, const Metadata& metadata);
+  static std::uint32_t slot_offset(std::uint8_t slot) { return slot == 0 ? SlotAOffset : SlotBOffset; }
+  static std::uint32_t metadata_offset(std::uint8_t index) { return index == 0 ? MetadataAOffset : MetadataBOffset; }
+  static bool newer(std::uint32_t left, std::uint32_t right) { return static_cast<std::int32_t>(left - right) > 0; }
+
+  FlashPort& flash_;
+  std::optional<ActiveImageInfo> active_;
+  std::array<Metadata, 2> metadata_{};
+  std::uint8_t active_metadata_index_{};
+  Upload upload_{};
+};
+
+}  // namespace midi

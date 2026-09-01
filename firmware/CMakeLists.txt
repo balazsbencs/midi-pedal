@@ -12,6 +12,7 @@ add_library(midi_core
   src/core/switch_engine.cpp
   src/core/action_engine.cpp
   src/core/expression.cpp
+  src/core/config_store.cpp
   src/app/controller.cpp
 )
 target_include_directories(midi_core PUBLIC src)
@@ -36,6 +37,10 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(expression_test tests/expression_test.cpp)
   target_link_libraries(expression_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(config_store_test tests/config_store_test.cpp)
+  target_link_libraries(config_store_test PRIVATE midi_core GTest::gtest_main)
+  target_compile_definitions(config_store_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
@@ -56,4 +61,5 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(midi_queue_test)
   gtest_discover_tests(action_engine_test)
   gtest_discover_tests(expression_test)
+  gtest_discover_tests(config_store_test)
 endif()
