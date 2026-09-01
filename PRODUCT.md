@@ -8,7 +8,7 @@ web
 
 ## Stack
 
-Open decision. The browser editor will be a static client-side application; framework selection is intentionally deferred until implementation planning.
+Static React 19.2 application built with TypeScript 5.9 and Vite 8, tested with Vitest and Playwright Chromium, and deployable to an ordinary HTTPS host without a backend. Firmware uses C++20 with Raspberry Pi Pico SDK 2.2.0 and TinyUSB; carrier hardware is authored in KiCad 10.0.6.
 
 ## Users
 

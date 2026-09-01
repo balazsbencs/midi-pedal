@@ -1,7 +1,7 @@
 # MIDI Controller Pedal Design Specification
 
-**Status:** Approved design, pending written-spec review  
-**Date:** 2026-09-01  
+**Status:** Approved for implementation planning
+**Date:** 2026-09-01
 **Reference product:** Morningstar MC4 Pro interaction model
 
 ## 1. Product intent
