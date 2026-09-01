@@ -10,6 +10,7 @@
 #include "hal/pico_relays.hpp"
 #include "hal/pico_switches.hpp"
 #include "hal/pico_uart_midi.hpp"
+#include "display/st7796s.hpp"
 
 namespace {
 class PicoPorts final : public midi::ControllerPorts {
@@ -41,8 +42,16 @@ int main() {
   ports.switches().initialize();
   ports.midi().initialize();
   ports.expression().initialize();
+  midi::display::St7796sDisplay display;
+  display.initialize();
   midi::Controller controller(ports);
   controller.initialize();
+  midi::LiveView boot_view{};
+  boot_view.bank = 1;
+  boot_view.page = 1;
+  boot_view.positions = {1, 1, 1, 1};
+  boot_view.usbConnected = true;
+  display.present(boot_view);
   while (true) {
     ports.midi().service();
     tight_loop_contents();

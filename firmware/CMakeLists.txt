@@ -14,6 +14,8 @@ add_library(midi_core
   src/core/expression.cpp
   src/core/config_store.cpp
   src/core/frame_decoder.cpp
+  src/display/live_renderer.cpp
+  src/display/font_ascii.cpp
   src/usb/usb_descriptors.c
   src/usb/usb_transport.cpp
   src/app/controller.cpp
@@ -27,6 +29,7 @@ add_library(pico_hal
   src/hal/pico_relays.cpp
   src/hal/pico_switches.cpp
   src/hal/pico_uart_midi.cpp
+  src/display/st7796s.cpp
 )
 target_include_directories(pico_hal PUBLIC src)
 target_link_libraries(pico_hal PUBLIC midi_core)
@@ -67,11 +70,19 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(pico_hal_contract_test tests/pico_hal_contract_test.cpp)
   target_link_libraries(pico_hal_contract_test PRIVATE pico_hal GTest::gtest_main)
+
+  add_executable(live_renderer_test tests/live_renderer_test.cpp)
+  target_link_libraries(live_renderer_test PRIVATE midi_core GTest::gtest_main)
+  target_compile_definitions(live_renderer_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+
+  add_executable(display_golden_generator tests/display_golden_generator.cpp)
+  target_link_libraries(display_golden_generator PRIVATE midi_core)
+  target_compile_definitions(display_golden_generator PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(midi_pedal src/main.cpp)
-  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync)
+  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma)
   target_include_directories(midi_pedal PRIVATE src)
   target_compile_definitions(midi_pedal PRIVATE PICO_ON_DEVICE=1)
   pico_enable_stdio_usb(midi_pedal 1)
@@ -92,4 +103,5 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(usb_descriptor_test)
   gtest_discover_tests(usb_transport_test)
   gtest_discover_tests(pico_hal_contract_test)
+  gtest_discover_tests(live_renderer_test)
 endif()

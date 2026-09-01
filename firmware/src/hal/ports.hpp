@@ -14,6 +14,9 @@ struct LiveView {
   std::array<std::uint8_t, 4> positions{};
   bool expressionAvailable{};
   std::uint8_t expressionValue{};
+  bool usbConnected{};
+  bool configurationError{};
+  bool queueOverflow{};
 };
 
 struct Clock {
