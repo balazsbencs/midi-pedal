@@ -67,8 +67,8 @@ async function requiredPath(root, relativePath, label) {
   return path;
 }
 
-/** @param {{root?: string, outDir?: string, version?: string, sourceDateEpoch?: number}} [options] */
-export async function packageRelease({ root = toolRoot, outDir, version = "0.1.0", sourceDateEpoch = Number(process.env.SOURCE_DATE_EPOCH ?? 0) } = {}) {
+/** @param {{root?: string, outDir?: string, version?: string, sourceDateEpoch?: number, changelogPath?: string}} [options] */
+export async function packageRelease({ root = toolRoot, outDir, version = "0.1.0", sourceDateEpoch = Number(process.env.SOURCE_DATE_EPOCH ?? 0), changelogPath = "CHANGELOG.md" } = {}) {
   if (!outDir) throw new Error("outDir is required");
   root = resolve(root); outDir = resolve(root, outDir);
   const editorDir = await requiredPath(root, "editor/dist", "editor-dist.zip");
@@ -76,10 +76,12 @@ export async function packageRelease({ root = toolRoot, outDir, version = "0.1.0
     ["firmware.uf2", "build/pico2-release/firmware/midi_pedal.uf2", "MIT"],
     ["firmware.elf", "build/pico2-release/firmware/midi_pedal.elf", "MIT"],
     ["firmware.map", "build/pico2-release/firmware/midi_pedal.elf.map", "MIT"],
+    ["CHANGELOG.md", changelogPath, "CC-BY-SA-4.0"],
     ["config-schema.json", "packages/protocol/schema/config-v1.schema.json", "MIT"],
     ["factory-empty.json", "firmware/defaults/factory-empty.json", "MIT"],
     ["factory-empty.bin", "firmware/defaults/factory-empty.bin", "MIT"],
     ["protocol.md", "docs/protocol.md", "CC-BY-SA-4.0"],
+    ["flashing.md", "docs/flashing.md", "CC-BY-SA-4.0"],
     ["fabrication-bom.csv", "hardware/fabrication/bom.csv", "CERN-OHL-S-2.0"],
     ["fabrication-positions.csv", "hardware/fabrication/positions.csv", "CERN-OHL-S-2.0"],
     ["front-panel.dxf", "hardware/mechanical/front-panel.dxf", "CERN-OHL-S-2.0"],
@@ -118,7 +120,7 @@ export async function packageRelease({ root = toolRoot, outDir, version = "0.1.0
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))) {
   const args = process.argv.slice(2).filter(argument => argument !== "--");
-  const { values } = parseArgs({ args, options: { version: { type: "string", default: "0.1.0" }, out: { type: "string" } } });
-  const manifest = await packageRelease({ outDir: values.out, version: values.version });
+  const { values } = parseArgs({ args, options: { version: { type: "string", default: "0.1.0" }, out: { type: "string" }, changelog: { type: "string", default: "CHANGELOG.md" } } });
+  const manifest = await packageRelease({ outDir: values.out, version: values.version, changelogPath: values.changelog });
   console.log(JSON.stringify(manifest, null, 2));
 }

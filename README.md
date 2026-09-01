@@ -34,7 +34,7 @@ The portable configuration and USB frame contracts are documented in [docs/proto
 - `docs/` — build, flashing, hosting, assembly, protocol, troubleshooting, and acceptance guides.
 - `tools/` — validation, HIL, and release tooling.
 
-Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [editor hosting](docs/editor-hosting.md), [hardware assembly](docs/hardware-assembly.md), [protocol](docs/protocol.md), [troubleshooting](docs/troubleshooting.md), and [contributing](CONTRIBUTING.md).
+Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [editor hosting](docs/editor-hosting.md), [hardware assembly](docs/hardware-assembly.md), [protocol](docs/protocol.md), [troubleshooting](docs/troubleshooting.md), [releasing](docs/releasing.md), and [contributing](CONTRIBUTING.md).
 
 ## Build and flash
 
@@ -44,6 +44,15 @@ The editor is hosted as static files; see [editor hosting](docs/editor-hosting.m
 The browser connects directly to the pedal over WebSerial and never requires a
 project account or backend. Configuration is intentionally prepared off-stage;
 the pedal has no touch setup or wireless feature.
+
+## Release downloads
+
+Every push to `main` runs the release pipeline. It calculates the next SemVer
+from conventional commits, builds the firmware, and publishes a GitHub Release
+with the generated changelog, checksums, and downloadable `firmware.uf2` image.
+Use the [GitHub Releases](https://github.com/balazsbencs/midi-pedal/releases)
+page and follow the included `flashing.md` guide (or the checked-in
+[flashing guide](docs/flashing.md)) before installing an image.
 
 ## License
 

@@ -10,5 +10,5 @@
     "checkJs": false,
     "types": ["node"]
   },
-  "include": ["package.test.ts"]
+  "include": ["*.test.ts"]
 }

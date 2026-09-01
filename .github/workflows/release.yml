@@ -2,13 +2,44 @@ name: release
 
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
 
 jobs:
-  package:
+  metadata:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tag: ${{ steps.release.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Calculate SemVer and conventional changelog
+        id: release
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build
+          node tools/release/next.mjs --output build/release-metadata.json --notes build/release-notes.md
+          {
+            echo "version=$(node -p \"JSON.parse(require('fs').readFileSync('build/release-metadata.json')).version\")"
+            echo "tag=$(node -p \"JSON.parse(require('fs').readFileSync('build/release-metadata.json')).tag\")"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: metadata
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,28 +56,82 @@ jobs:
       - run: sudo apt-get install -y --no-install-recommends ninja-build gcc-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib libnewlib-arm-none-eabi
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
+      - run: pnpm factory:empty
+      - run: git diff --exit-code -- firmware/defaults/factory-empty.bin
       - run: pnpm --filter @midi-pedal/editor exec playwright install --with-deps chromium
       - run: pnpm --filter @midi-pedal/editor test:e2e
       - run: cmake --preset pico2-release
       - run: cmake --build --preset pico2-release
+      - name: Check firmware boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f build/pico2-release/firmware/midi_pedal.uf2
+          bytes=$(stat -c '%s' build/pico2-release/firmware/midi_pedal.bin)
+          test "$bytes" -lt $((2 * 1024 * 1024))
       - run: pnpm --filter @midi-pedal/editor build
-      - name: Require qualified HIL report
+      - name: Record simulated HIL report
         shell: bash
-        run: |
-          test -f artifacts/hil-report.json
-          test "$(node -e "console.log(JSON.parse(require('fs').readFileSync('artifacts/hil-report.json')).status)")" = PASS
-      - name: Package deterministic release
-        shell: bash
-        run: |
-          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
-          pnpm release:package -- --version "${GITHUB_REF_NAME#v}" --out build/release
         env:
           GIT_COMMIT: ${{ github.sha }}
+          FIRMWARE_VERSION: ${{ needs.metadata.outputs.version }}
+          HIL_RIG: simulated
+        run: |
+          set +e
+          pnpm hil:release -- --rig simulated --report build/hil-simulated.json
+          status=$?
+          set -e
+          test "$status" -eq 0 -o "$status" -eq 1
+          test -s build/hil-simulated.json
+      - name: Recreate release metadata for the build checkout
+        shell: bash
+        run: |
+          node tools/release/next.mjs --output build/release-metadata.json --notes build/release-notes.md
+          test "$(node -p "JSON.parse(require('fs').readFileSync('build/release-metadata.json')).version")" = "${{ needs.metadata.outputs.version }}"
+      - name: Package release assets
+        shell: bash
+        env:
+          GIT_COMMIT: ${{ github.sha }}
+        run: |
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          pnpm release:package -- \
+            --version "${{ needs.metadata.outputs.version }}" \
+            --out build/release \
+            --changelog build/release-notes.md
       - uses: actions/upload-artifact@v4
         with:
-          name: midi-pedal-release
+          name: release-assets
           path: build/release
-      - uses: softprops/action-gh-release@v2
+
+  publish:
+    needs: [metadata, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
         with:
-          draft: true
-          files: build/release/*
+          name: release-assets
+          path: build/release
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ needs.metadata.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $RELEASE_TAG already exists; refreshing its assets."
+            gh release edit "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "$RELEASE_TAG" \
+              --notes-file build/release/CHANGELOG.md
+          else
+            gh release create "$RELEASE_TAG" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "$RELEASE_TAG" \
+              --notes-file build/release/CHANGELOG.md
+          fi
+          mapfile -d '' assets < <(find build/release -type f -print0 | sort -z)
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --clobber "${assets[@]}"
