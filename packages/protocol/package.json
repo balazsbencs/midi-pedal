@@ -9,13 +9,15 @@
   },
   "scripts": {
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "fixtures": "tsx ../../tools/generate-protocol-fixtures.ts"
   },
   "dependencies": {
     "ajv": "^8.17.1"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.2",
     "vitest": "^4.1.0"
   }

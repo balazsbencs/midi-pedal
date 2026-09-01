@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "name": "full-boundary-valid",
+      "json": "json/full-boundary-valid.json",
+      "binary": "bin/full-boundary-valid.bin",
+      "sha256": "ef74e4745369ab87c01a5b31ae1e9a1bebc2b66ba8a3aa3295f1c5f8782df0dc"
+    },
+    {
+      "name": "minimal-valid",
+      "json": "json/minimal-valid.json",
+      "binary": "bin/minimal-valid.bin",
+      "sha256": "1653519eab37be43aa195fe31da7669e1dd1e0bf55f384333de1415c9b61dbd3"
+    }
+  ]
+}
