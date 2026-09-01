@@ -1,0 +1,48 @@
+name: editor
+
+on:
+  push:
+    paths:
+      - "editor/**"
+      - "packages/protocol/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/editor.yml"
+  pull_request:
+    paths:
+      - "editor/**"
+      - "packages/protocol/**"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/editor.yml"
+
+jobs:
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @midi-pedal/editor typecheck
+      - run: pnpm --filter @midi-pedal/editor test
+      - run: pnpm --filter @midi-pedal/editor exec playwright install --with-deps chromium
+      - run: pnpm --filter @midi-pedal/editor test:e2e
+      - run: pnpm --filter @midi-pedal/editor build
+      - name: Ensure static output has no backend URL
+        shell: bash
+        run: |
+          ! rg -n "https?://(api|backend)" editor/dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midi-pedal-editor
+          path: editor/dist
+
