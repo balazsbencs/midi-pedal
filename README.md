@@ -34,7 +34,7 @@ The portable configuration and USB frame contracts are documented in [docs/proto
 - `docs/` — build, flashing, hosting, assembly, protocol, troubleshooting, and acceptance guides.
 - `tools/` — validation, HIL, and release tooling.
 
-Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [editor hosting](docs/editor-hosting.md), [hardware assembly](docs/hardware-assembly.md), [protocol](docs/protocol.md), and [troubleshooting](docs/troubleshooting.md).
+Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [editor hosting](docs/editor-hosting.md), [hardware assembly](docs/hardware-assembly.md), [protocol](docs/protocol.md), [troubleshooting](docs/troubleshooting.md), and [contributing](CONTRIBUTING.md).
 
 ## Build and flash
 

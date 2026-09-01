@@ -1,0 +1,10 @@
+{
+  "commands": [
+    { "document": "README.md", "command": "pnpm check" },
+    { "document": "docs/building.md", "command": "cmake --preset host-debug" },
+    { "document": "docs/building.md", "command": "cmake --preset pico2-release" },
+    { "document": "docs/flashing.md", "command": "picotool info" },
+    { "document": "docs/editor-hosting.md", "command": "pnpm --filter @midi-pedal/editor build" }
+  ]
+}
+

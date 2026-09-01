@@ -1,0 +1,51 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: sudo apt-get update
+      - run: sudo apt-get install --no-install-recommends ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm --filter @midi-pedal/editor exec playwright install --with-deps chromium
+      - run: pnpm --filter @midi-pedal/editor test:e2e
+      - run: cmake --preset pico2-release
+      - run: cmake --build --preset pico2-release
+      - run: pnpm --filter @midi-pedal/editor build
+      - name: Require qualified HIL report
+        shell: bash
+        run: |
+          test -f artifacts/hil-report.json
+          test "$(node -e "console.log(JSON.parse(require('fs').readFileSync('artifacts/hil-report.json')).status)")" = PASS
+      - name: Package deterministic release
+        shell: bash
+        run: |
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          pnpm release:package -- --version "${GITHUB_REF_NAME#v}" --out build/release
+        env:
+          GIT_COMMIT: ${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: midi-pedal-release
+          path: build/release
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: build/release/*

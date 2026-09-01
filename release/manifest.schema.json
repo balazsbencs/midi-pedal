@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://midi-pedal.dev/schema/release-manifest-v1.json",
+  "type": "object",
+  "required": ["schemaVersion", "releaseVersion", "gitCommit", "compatibility", "artifacts", "hil"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "releaseVersion": { "type": "string" },
+    "gitCommit": { "type": "string" },
+    "buildTimeUtc": { "type": "string" },
+    "compatibility": { "type": "object", "required": ["firmware", "editor", "configSchema", "imageFormat", "usbProtocol", "minimumChromium"], "additionalProperties": true },
+    "artifacts": { "type": "array", "items": { "type": "object", "required": ["name", "size", "sha256", "license"] } },
+    "hil": { "type": "object", "required": ["status"] }
+  }
+}
+
