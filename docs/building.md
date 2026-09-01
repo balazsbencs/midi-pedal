@@ -19,7 +19,7 @@ with an unpinned system copy when reproducing a release. On Debian/Ubuntu,
 the common host packages are:
 
 ```bash
-sudo apt-get install cmake ninja-build gcc-arm-none-eabi libstdc++-arm-none-eabi-dev libnewlib-arm-none-eabi
+sudo apt-get install cmake ninja-build gcc-arm-none-eabi libstdc++-arm-none-eabi-dev libstdc++-arm-none-eabi-newlib libnewlib-arm-none-eabi
 ```
 
 On macOS install the equivalent packages with Homebrew. On Windows, install
