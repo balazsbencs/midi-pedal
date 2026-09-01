@@ -6,34 +6,47 @@
 
 #include "app/controller.hpp"
 #include "board/pico2_pins.hpp"
+#include "hal/pico_expression_adc.hpp"
+#include "hal/pico_relays.hpp"
+#include "hal/pico_switches.hpp"
+#include "hal/pico_uart_midi.hpp"
 
 namespace {
 class PicoPorts final : public midi::ControllerPorts {
  public:
-  PicoPorts() {
-    gpio_init(midi::board::Relay1);
-    gpio_init(midi::board::Relay2);
-    gpio_set_dir(midi::board::Relay1, GPIO_OUT);
-    gpio_set_dir(midi::board::Relay2, GPIO_OUT);
-    gpio_put(midi::board::Relay1, 0);
-    gpio_put(midi::board::Relay2, 0);
-  }
+  PicoPorts() { relays_.initialize(); }
 
   void relay_set(std::uint8_t contact, bool closed) override {
-    if (contact == 1) gpio_put(midi::board::Relay1, closed ? 1 : 0);
-    if (contact == 2) gpio_put(midi::board::Relay2, closed ? 1 : 0);
+    relays_.set(contact, closed);
   }
 
   bool read_active_config() override { return false; }
   void show_boot_status() override {}
+
+  midi::PicoSwitches& switches() { return switches_; }
+  midi::PicoUartMidi& midi() { return midi_; }
+  midi::PicoExpressionAdc& expression() { return expression_; }
+
+ private:
+  midi::PicoRelays relays_;
+  midi::PicoSwitches switches_;
+  midi::PicoUartMidi midi_;
+  midi::PicoExpressionAdc expression_;
 };
 }  // namespace
 
 int main() {
+  stdio_init_all();
   PicoPorts ports;
+  ports.switches().initialize();
+  ports.midi().initialize();
+  ports.expression().initialize();
   midi::Controller controller(ports);
   controller.initialize();
-  while (true) tight_loop_contents();
+  while (true) {
+    ports.midi().service();
+    tight_loop_contents();
+  }
 }
 
 #endif

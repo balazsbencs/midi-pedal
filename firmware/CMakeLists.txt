@@ -22,6 +22,16 @@ set_source_files_properties(src/usb/usb_descriptors.c PROPERTIES LANGUAGE CXX)
 target_include_directories(midi_core PUBLIC src)
 target_compile_features(midi_core PUBLIC cxx_std_20)
 
+add_library(pico_hal
+  src/hal/pico_expression_adc.cpp
+  src/hal/pico_relays.cpp
+  src/hal/pico_switches.cpp
+  src/hal/pico_uart_midi.cpp
+)
+target_include_directories(pico_hal PUBLIC src)
+target_link_libraries(pico_hal PUBLIC midi_core)
+target_compile_features(pico_hal PUBLIC cxx_std_20)
+
 if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(image_reader_test tests/image_reader_test.cpp)
   target_link_libraries(image_reader_test PRIVATE midi_core GTest::gtest_main)
@@ -54,11 +64,14 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(usb_transport_test tests/usb_transport_test.cpp)
   target_link_libraries(usb_transport_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(pico_hal_contract_test tests/pico_hal_contract_test.cpp)
+  target_link_libraries(pico_hal_contract_test PRIVATE pico_hal GTest::gtest_main)
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(midi_pedal src/main.cpp)
-  target_link_libraries(midi_pedal PRIVATE midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync)
+  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync)
   target_include_directories(midi_pedal PRIVATE src)
   target_compile_definitions(midi_pedal PRIVATE PICO_ON_DEVICE=1)
   pico_enable_stdio_usb(midi_pedal 1)
@@ -78,4 +91,5 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(frame_decoder_test)
   gtest_discover_tests(usb_descriptor_test)
   gtest_discover_tests(usb_transport_test)
+  gtest_discover_tests(pico_hal_contract_test)
 endif()
