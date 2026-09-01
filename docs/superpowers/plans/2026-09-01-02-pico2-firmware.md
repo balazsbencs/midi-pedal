@@ -19,6 +19,15 @@
 - Relays initialize open in hardware and software before configuration is read.
 - Flash layout on 4 MiB Pico 2: firmware below `0x200000`; slot A `0x200000..0x2EFFFF`; slot B `0x2F0000..0x3DFFFF`; metadata `0x3E0000..0x3FFFFF`; maximum image 768 KiB.
 
+### Current WIP status (2026-09-01)
+
+The host-tested core, A/B configuration store, composite CDC + USB-MIDI
+protocol path, Pico flash/USB adapters, embedded factory image, and the
+switch/action/expression runtime integration are present on `main`. Physical
+relay, MIDI, expression, display, power, and USB enumeration qualification is
+still required before a stage-use release; watchdog cadence and persistent
+expression settings remain follow-up hardening work.
+
 ---
 
 ### Task 1: Firmware build, board contract, and safe boot shell
@@ -253,8 +262,8 @@ git commit -m "feat(firmware): process calibrated expression input"
 **Files:**
 - Create: `firmware/src/core/config_store.hpp`
 - Create: `firmware/src/core/config_store.cpp`
-- Create: `firmware/src/hal/pico_flash_store.hpp`
-- Create: `firmware/src/hal/pico_flash_store.cpp`
+- Create: `firmware/src/hal/pico_flash_port.hpp`
+- Create: `firmware/src/hal/pico_flash_port.cpp`
 - Create: `firmware/tests/config_store_test.cpp`
 - Modify: `firmware/src/app/controller.cpp`
 
@@ -349,7 +358,10 @@ git commit -m "feat(firmware): expose composite USB MIDI and configuration"
 - Create: `firmware/src/hal/pico_expression_adc.cpp`
 - Create: `firmware/src/hal/pico_relays.hpp`
 - Create: `firmware/src/hal/pico_relays.cpp`
+- Create: `firmware/src/app/pedal_runtime.hpp`
+- Create: `firmware/src/app/pedal_runtime.cpp`
 - Create: `firmware/tests/pico_hal_contract_test.cpp`
+- Create: `firmware/tests/pedal_runtime_test.cpp`
 - Modify: `firmware/src/main.cpp`
 
 **Interfaces:**

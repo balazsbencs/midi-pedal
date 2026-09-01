@@ -8,6 +8,7 @@
 
 #include "app/controller.hpp"
 #include "app/controller_protocol_service.hpp"
+#include "app/pedal_runtime.hpp"
 #include "board/pico2_pins.hpp"
 #include "core/config_store.hpp"
 #include "hal/pico_expression_adc.hpp"
@@ -41,6 +42,7 @@ class PicoPorts final : public midi::ControllerPorts {
   midi::PicoSwitches& switches() { return switches_; }
   midi::PicoUartMidi& midi() { return midi_; }
   midi::PicoExpressionAdc& expression() { return expression_; }
+  midi::PicoRelays& relays() { return relays_; }
 
  private:
   midi::ConfigStore* config_{};
@@ -50,7 +52,35 @@ class PicoPorts final : public midi::ControllerPorts {
   midi::PicoExpressionAdc expression_;
 };
 
-class PicoExpressionInput final : public midi::ExpressionSampleInput {
+class PicoConfigSource final : public midi::RuntimeConfigSource {
+ public:
+  explicit PicoConfigSource(midi::ConfigStore& store) : store_(store) {}
+
+  [[nodiscard]] midi::RuntimeConfigSnapshot status() const override {
+    const auto info = store_.active_info();
+    return info.has_value() ? midi::RuntimeConfigSnapshot{true, info->sequence, info->bank_count}
+                             : midi::RuntimeConfigSnapshot{};
+  }
+
+  [[nodiscard]] bool load_bank(std::uint8_t index, midi::BankConfig& output) const override {
+    return store_.load_bank(index, output);
+  }
+
+ private:
+  midi::ConfigStore& store_;
+};
+
+class PicoSwitchInput final : public midi::RuntimeSwitchSource {
+ public:
+  explicit PicoSwitchInput(const midi::PicoSwitches& switches) : switches_(switches) {}
+
+  [[nodiscard]] std::uint8_t read_mask() const override { return switches_.read_mask(); }
+
+ private:
+  const midi::PicoSwitches& switches_;
+};
+
+class PicoExpressionInput final : public midi::ExpressionSampleInput, public midi::RuntimeExpressionSource {
  public:
   explicit PicoExpressionInput(const midi::PicoExpressionAdc& adc) : adc_(adc) {}
 
@@ -87,15 +117,15 @@ int main() {
   midi::usb::PicoUsbPort usb(usb_api);
   (void)usb.initialize();
   midi::usb::ProtocolDispatcher dispatcher(protocol, usb);
-
-  midi::LiveView boot_view{};
-  boot_view.bank = 1;
-  boot_view.page = 1;
-  boot_view.positions = {1, 1, 1, 1};
-  boot_view.usbConnected = true;
-  display.present(boot_view);
+  PicoConfigSource config_source(config);
+  PicoSwitchInput switch_input(ports.switches());
+  midi::usb::UsbTransport usb_transport(usb);
+  midi::PedalRuntime runtime(config_source, switch_input, expression_input, ports.midi(), ports.relays(),
+                             usb_transport, usb, display, expression);
+  (void)runtime.initialize();
   while (true) {
     usb.service(dispatcher);
+    runtime.tick(to_ms_since_boot(get_absolute_time()));
     ports.midi().service();
     tight_loop_contents();
   }

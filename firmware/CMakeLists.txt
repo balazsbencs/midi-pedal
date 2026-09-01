@@ -22,6 +22,7 @@ add_library(midi_core
   src/usb/pico_usb.cpp
   src/app/controller.cpp
   src/app/controller_protocol_service.cpp
+  src/app/pedal_runtime.cpp
 )
 set_source_files_properties(src/usb/usb_descriptors.c PROPERTIES LANGUAGE CXX)
 target_include_directories(midi_core PUBLIC src)
@@ -82,6 +83,9 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(protocol_dispatcher_test tests/protocol_dispatcher_test.cpp)
   target_link_libraries(protocol_dispatcher_test PRIVATE midi_core GTest::gtest_main)
 
+  add_executable(pedal_runtime_test tests/pedal_runtime_test.cpp)
+  target_link_libraries(pedal_runtime_test PRIVATE midi_core GTest::gtest_main)
+
   add_executable(pico_hal_contract_test tests/pico_hal_contract_test.cpp)
   target_link_libraries(pico_hal_contract_test PRIVATE pico_hal GTest::gtest_main)
 
@@ -129,6 +133,7 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(usb_transport_test)
   gtest_discover_tests(pico_usb_port_test)
   gtest_discover_tests(protocol_dispatcher_test)
+  gtest_discover_tests(pedal_runtime_test)
   gtest_discover_tests(pico_hal_contract_test)
   gtest_discover_tests(live_renderer_test)
 endif()

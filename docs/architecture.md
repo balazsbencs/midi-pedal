@@ -12,7 +12,11 @@ The product has four independently testable boundaries:
    `PicoUsbPort` keeps CDC responses bounded and non-blocking, while the
    `ProtocolDispatcher` routes every framed editor command to the flash-backed
    `ControllerProtocolService`.
-4. `editor` is a static Chromium application. Its reducer keeps drafts local;
+4. `firmware/src/app/pedal_runtime.cpp` is the live-loop coordinator. It loads
+   the selected bank, feeds switches and expression samples into the core,
+   routes TRS/USB MIDI and relay commands, applies navigation, and submits
+   dirty-only `LiveView` updates to the display.
+5. `editor` is a static Chromium application. Its reducer keeps drafts local;
    `DeviceSession` sends framed whole-image synchronization over WebSerial.
 
 The carrier hardware is deliberately a separate measured layer. Relay contact
