@@ -1,0 +1,14 @@
+{
+  "name": "midi-pedal",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Open-source four-switch Pico 2 MIDI foot controller",
+  "packageManager": "pnpm@10.15.0",
+  "engines": { "node": ">=24 <25" },
+  "scripts": {
+    "check:toolchain": "node tools/check-toolchain.mjs",
+    "test:ts": "pnpm -r --if-present test",
+    "test:cpp": "cmake --preset host-debug && cmake --build --preset host-debug && ctest --preset host-debug --output-on-failure",
+    "check": "pnpm check:toolchain && pnpm test:ts && pnpm test:cpp"
+  }
+}
