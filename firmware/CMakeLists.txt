@@ -41,6 +41,13 @@ target_include_directories(pico_hal PUBLIC src)
 target_link_libraries(pico_hal PUBLIC midi_core)
 target_compile_features(pico_hal PUBLIC cxx_std_20)
 
+if(MIDI_PEDAL_BUILD_FIRMWARE)
+  # pico_hal owns the device implementations, so it—not only main—must see
+  # the device guard and SDK headers when producing a Pico firmware image.
+  target_compile_definitions(pico_hal PRIVATE PICO_ON_DEVICE=1)
+  target_link_libraries(pico_hal PRIVATE pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma hardware_watchdog)
+endif()
+
 if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(image_reader_test tests/image_reader_test.cpp)
   target_link_libraries(image_reader_test PRIVATE midi_core GTest::gtest_main)
