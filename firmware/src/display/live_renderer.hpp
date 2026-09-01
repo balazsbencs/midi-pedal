@@ -47,14 +47,13 @@ class LiveRenderer {
 
  private:
   static constexpr std::size_t TilePixels = 2048;
+  enum class Region : std::uint8_t { Header, Quadrant, Footer };
 
   void render_header(const LiveView& view);
-  void render_quadrant(unsigned index, std::uint8_t position);
+  void render_quadrant(unsigned index, const LiveView& view);
   void render_footer(const LiveView& view);
-  void render_rect(Rect rect, std::uint16_t fill, std::uint16_t border,
-                   std::uint8_t text_code, std::uint8_t value,
-                   bool unavailable, bool error, bool warning);
-  void send_row(std::uint16_t y, std::uint16_t x, std::uint16_t width);
+  void render_rect(Rect rect, Region region, const LiveView& view,
+                   unsigned quadrant_index, std::uint16_t border);
 
   RenderTarget& target_;
   LiveView previous_{};
@@ -63,4 +62,3 @@ class LiveRenderer {
 };
 
 }  // namespace midi::display
-

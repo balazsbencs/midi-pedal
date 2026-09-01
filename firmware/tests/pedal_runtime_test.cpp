@@ -1,5 +1,7 @@
 #include <array>
+#include <algorithm>
 #include <cstdint>
+#include <string_view>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -8,6 +10,20 @@
 #include "usb/pico_usb.hpp"
 
 namespace {
+template <std::size_t Capacity>
+midi::AsciiString<Capacity> ascii(std::string_view value) {
+  midi::AsciiString<Capacity> output{};
+  const auto length = std::min(value.size(), Capacity);
+  for (std::size_t index = 0; index < length; ++index) output.data[index] = value[index];
+  output.length = static_cast<std::uint8_t>(length);
+  return output;
+}
+
+template <std::size_t Capacity>
+bool same_ascii(const midi::AsciiString<Capacity>& left, const midi::AsciiString<Capacity>& right) {
+  return left.length == right.length && std::equal(left.data.begin(), left.data.end(), right.data.begin());
+}
+
 class FakeConfig final : public midi::RuntimeConfigSource {
  public:
   midi::RuntimeConfigSnapshot snapshot{true, 7, 2};
@@ -177,6 +193,35 @@ TEST(PedalRuntime, MissingImageStartsSafeEmptyWithoutBlockingTheDevice) {
   EXPECT_FALSE(display.views.back().configurationError);
   EXPECT_FALSE(display.views.back().expressionAvailable);
   EXPECT_EQ(display.views.back().positions, (std::array<std::uint8_t, 4>{1, 1, 1, 1}));
+  EXPECT_TRUE(same_ascii(display.views.back().bankName, ascii<20>("EMPTY")));
+  EXPECT_TRUE(same_ascii(display.views.back().selectedPositions[0].label, ascii<12>("EMPTY")));
+  EXPECT_TRUE(same_ascii(display.views.back().expressionLabel, ascii<12>("NONE")));
+}
+
+TEST(PedalRuntime, PublishesActiveBankPositionAndExpressionLabels) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  config.banks[0].name = ascii<20>("STAGE");
+  config.banks[0].pages[0].presets[0].position1 = {ascii<12>("LEAD"), 0x1234};
+  config.banks[0].pages[0].presets[0].position2 = {ascii<12>("RHY"), 0x4567};
+  config.banks[0].expression = {true, ascii<12>("VOL"), 1, 7, midi::Destination::Both, 0, 127, false};
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays, usb_transport, usb_port, display, expression);
+
+  ASSERT_TRUE(runtime.initialize());
+  const auto& view = display.views.back();
+  EXPECT_TRUE(same_ascii(view.bankName, ascii<20>("STAGE")));
+  EXPECT_TRUE(same_ascii(view.selectedPositions[0].label, ascii<12>("LEAD")));
+  EXPECT_EQ(view.selectedPositions[0].accentRgb565, 0x1234U);
+  EXPECT_TRUE(same_ascii(view.expressionLabel, ascii<12>("VOL")));
 }
 
 TEST(PedalRuntime, SamplesExpressionOnlyOnceForRepeatedTimestamp) {

@@ -11,9 +11,12 @@ namespace midi {
 struct LiveView {
   std::uint8_t bank{};
   std::uint8_t page{};
+  AsciiString<20> bankName{};
   std::array<std::uint8_t, 4> positions{};
+  std::array<PositionView, 4> selectedPositions{};
   bool expressionAvailable{};
   std::uint8_t expressionValue{};
+  AsciiString<12> expressionLabel{};
   bool usbConnected{};
   bool configurationError{};
   bool queueOverflow{};

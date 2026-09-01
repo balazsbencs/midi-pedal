@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <span>
@@ -9,6 +10,15 @@
 #include "display/live_renderer.hpp"
 
 namespace {
+
+template <std::size_t Capacity>
+midi::AsciiString<Capacity> ascii(std::string_view value) {
+  midi::AsciiString<Capacity> output{};
+  const auto length = std::min(value.size(), Capacity);
+  for (std::size_t index = 0; index < length; ++index) output.data[index] = value[index];
+  output.length = static_cast<std::uint8_t>(length);
+  return output;
+}
 
 class FileTarget final : public midi::display::RenderTarget {
  public:
@@ -38,12 +48,35 @@ midi::LiveView view_for(std::string_view name) {
   if (name == "factory-empty" || name == "expression-unavailable") {
     view.expressionAvailable = false;
     view.usbConnected = false;
+    view.bankName = {};
+    view.selectedPositions = {};
+    view.expressionLabel = {};
   } else if (name == "toggle-position-2") {
+    view.bankName = ascii<20>("STAGE");
+    view.selectedPositions = {{{ascii<12>("LEAD"), midi::display::ColorAccent},
+                              {ascii<12>("RHY"), midi::display::ColorSuccess},
+                              {ascii<12>("FX"), midi::display::ColorWarning},
+                              {ascii<12>("TAP"), midi::display::ColorForeground}}};
+    view.expressionLabel = ascii<12>("VOL");
     view.positions = {2, 2, 2, 2};
     view.expressionValue = 96;
   } else if (name == "recoverable-error") {
+    view.bankName = ascii<20>("STAGE");
+    view.selectedPositions = {{{ascii<12>("LEAD"), midi::display::ColorAccent},
+                              {ascii<12>("RHY"), midi::display::ColorSuccess},
+                              {ascii<12>("FX"), midi::display::ColorWarning},
+                              {ascii<12>("TAP"), midi::display::ColorForeground}}};
+    view.expressionLabel = ascii<12>("VOL");
     view.configurationError = true;
     view.queueOverflow = true;
+    view.watchdogReset = true;
+  } else {
+    view.bankName = ascii<20>("STAGE");
+    view.selectedPositions = {{{ascii<12>("LEAD"), midi::display::ColorAccent},
+                              {ascii<12>("RHY"), midi::display::ColorSuccess},
+                              {ascii<12>("FX"), midi::display::ColorWarning},
+                              {ascii<12>("TAP"), midi::display::ColorForeground}}};
+    view.expressionLabel = ascii<12>("VOL");
   }
   return view;
 }

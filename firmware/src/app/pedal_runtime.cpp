@@ -1,8 +1,38 @@
 #include "pedal_runtime.hpp"
 
 #include <algorithm>
+#include <string_view>
 
 namespace midi {
+namespace {
+
+template <std::size_t Capacity>
+void copy_label(AsciiString<Capacity>& output, const AsciiString<Capacity>& input,
+                std::string_view fallback) {
+  output = {};
+  const auto length = std::min<std::size_t>(input.length, Capacity);
+  if (length == 0) {
+    const auto fallback_length = std::min(fallback.size(), Capacity);
+    std::copy_n(fallback.begin(), fallback_length, output.data.begin());
+    output.length = static_cast<std::uint8_t>(fallback_length);
+    return;
+  }
+  std::copy_n(input.data.begin(), length, output.data.begin());
+  output.length = static_cast<std::uint8_t>(length);
+}
+
+template <std::size_t Capacity>
+bool same_ascii(const AsciiString<Capacity>& left, const AsciiString<Capacity>& right) {
+  if (left.length != right.length) return false;
+  const auto length = std::min<std::size_t>(left.length, Capacity);
+  return std::equal(left.data.begin(), left.data.begin() + length, right.data.begin());
+}
+
+bool same_position_view(const PositionView& left, const PositionView& right) {
+  return same_ascii(left.label, right.label) && left.accentRgb565 == right.accentRgb565;
+}
+
+}  // namespace
 
 PedalRuntime::PedalRuntime(RuntimeConfigSource& config, RuntimeSwitchSource& switches,
                            RuntimeExpressionSource& expression_input, MidiPort& trs_midi, RelayPort& relays,
@@ -194,10 +224,18 @@ bool PedalRuntime::navigate(NavigationCommand command) {
 }
 
 bool PedalRuntime::same_view(const LiveView& left, const LiveView& right) {
-  return left.bank == right.bank && left.page == right.page && left.positions == right.positions &&
-         left.expressionAvailable == right.expressionAvailable && left.expressionValue == right.expressionValue &&
-         left.usbConnected == right.usbConnected && left.configurationError == right.configurationError &&
-         left.queueOverflow == right.queueOverflow && left.watchdogReset == right.watchdogReset;
+  if (left.bank != right.bank || left.page != right.page || !same_ascii(left.bankName, right.bankName) ||
+      left.positions != right.positions ||
+      !same_ascii(left.expressionLabel, right.expressionLabel) ||
+      left.expressionAvailable != right.expressionAvailable || left.expressionValue != right.expressionValue ||
+      left.usbConnected != right.usbConnected || left.configurationError != right.configurationError ||
+      left.queueOverflow != right.queueOverflow || left.watchdogReset != right.watchdogReset) {
+    return false;
+  }
+  for (std::size_t index = 0; index < left.selectedPositions.size(); ++index) {
+    if (!same_position_view(left.selectedPositions[index], right.selectedPositions[index])) return false;
+  }
+  return true;
 }
 
 void PedalRuntime::render() {
@@ -206,10 +244,22 @@ void PedalRuntime::render() {
   view.page = static_cast<std::uint8_t>(page_index_ + 1u);
   for (std::size_t index = 0; index < view.positions.size(); ++index) view.positions[index] = 1;
   if (bank_loaded_) {
+    copy_label(view.bankName, bank_.name, "BANK");
     for (std::size_t index = 0; index < view.positions.size(); ++index) {
       const auto& preset = bank_.pages[page_index_].presets[index];
       view.positions[index] = engine_state_.position(preset.id) == Position::Two ? 2 : 1;
+      const auto selected = view.positions[index] == 2 ? preset.position2 : preset.position1;
+      view.selectedPositions[index] = selected;
+      copy_label(view.selectedPositions[index].label, selected.label,
+                 view.positions[index] == 2 ? "P2" : "P1");
     }
+    copy_label(view.expressionLabel, expression_.assignment().label, "NONE");
+  } else {
+    copy_label(view.bankName, AsciiString<20>{}, "EMPTY");
+    for (auto& position : view.selectedPositions) {
+      copy_label(position.label, AsciiString<12>{}, "EMPTY");
+    }
+    copy_label(view.expressionLabel, AsciiString<12>{}, "NONE");
   }
   view.expressionAvailable = expression_.view().available;
   view.expressionValue = expression_.view().value;

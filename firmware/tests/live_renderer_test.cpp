@@ -1,4 +1,5 @@
 #include <array>
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <span>
@@ -10,6 +11,15 @@
 #include "display/live_renderer.hpp"
 
 namespace {
+
+template <std::size_t Capacity>
+midi::AsciiString<Capacity> ascii(std::string_view value) {
+  midi::AsciiString<Capacity> output{};
+  const auto length = std::min(value.size(), Capacity);
+  for (std::size_t index = 0; index < length; ++index) output.data[index] = value[index];
+  output.length = static_cast<std::uint8_t>(length);
+  return output;
+}
 
 class FakeTarget final : public midi::display::RenderTarget {
  public:
@@ -42,6 +52,22 @@ bool has_rect_in(const FakeTarget& target, std::uint16_t x, std::uint16_t y,
     if (transfer.rect.x == x && transfer.rect.y == y && transfer.rect.width == width &&
         transfer.rect.height > 0 && transfer.rect.height <= height) {
       return true;
+    }
+  }
+  return false;
+}
+
+bool has_color_in(const FakeTarget& target, midi::display::Rect area, std::uint16_t color) {
+  for (const auto& transfer : target.transfers) {
+    for (std::uint16_t row = 0; row < transfer.rect.height; ++row) {
+      for (std::uint16_t column = 0; column < transfer.rect.width; ++column) {
+        const auto x = static_cast<std::uint16_t>(transfer.rect.x + column);
+        const auto y = static_cast<std::uint16_t>(transfer.rect.y + row);
+        if (x >= area.x && x < area.x + area.width && y >= area.y && y < area.y + area.height &&
+            transfer.pixels[static_cast<std::size_t>(row) * transfer.rect.width + column] == color) {
+          return true;
+        }
+      }
     }
   }
   return false;
@@ -102,6 +128,76 @@ TEST(LiveRenderer, DoesNotTransferUnchangedView) {
   target.transfers.clear();
   renderer.render(view);
   EXPECT_TRUE(target.transfers.empty());
+}
+
+TEST(LiveRenderer, RedrawsHeaderWhenWatchdogResetDiagnosticChanges) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  renderer.render(view);
+  target.transfers.clear();
+
+  view.watchdogReset = true;
+  renderer.render(view);
+
+  EXPECT_TRUE(has_rect_in(target, 0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight));
+}
+
+TEST(LiveRenderer, RedrawsTheNamedHeaderAndAffectedQuadrantOnly) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  view.bankName = ascii<20>("STAGE");
+  view.selectedPositions[1].label = ascii<12>("RHY");
+  view.selectedPositions[1].accentRgb565 = midi::display::ColorSuccess;
+  renderer.render(view);
+  target.transfers.clear();
+
+  view.bankName = ascii<20>("AMP");
+  view.selectedPositions[1].label = ascii<12>("CRN");
+  renderer.render(view);
+
+  EXPECT_TRUE(has_rect_in(target, 0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight));
+  EXPECT_TRUE(has_rect_in(target, midi::display::QuadrantWidth, midi::display::HeaderHeight,
+                          midi::display::QuadrantWidth, midi::display::QuadrantHeight));
+  for (const auto& transfer : target.transfers) {
+    const bool header = transfer.rect.y < midi::display::HeaderHeight;
+    const bool quadrant_b = transfer.rect.x == midi::display::QuadrantWidth &&
+                            transfer.rect.y >= midi::display::HeaderHeight &&
+                            transfer.rect.y < midi::display::FooterY;
+    EXPECT_TRUE(header || quadrant_b);
+  }
+}
+
+TEST(LiveRenderer, RendersConfiguredSelectedLabelAccentAndWatchdogDiagnostic) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  view.selectedPositions[0].label = ascii<12>("LEAD");
+  view.selectedPositions[0].accentRgb565 = midi::display::ColorSuccess;
+  view.watchdogReset = true;
+  renderer.render(view);
+
+  EXPECT_TRUE(has_color_in(target, {64, static_cast<std::uint16_t>(midi::display::HeaderHeight + 18),
+                                    48, 14},
+                           midi::display::ColorSuccess));
+  EXPECT_TRUE(has_color_in(target, {0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight},
+                           midi::display::ColorWarning));
+}
+
+TEST(LiveRenderer, RedrawsFooterWhenExpressionAssignmentLabelChanges) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  view.expressionLabel = ascii<12>("VOL");
+  renderer.render(view);
+  target.transfers.clear();
+
+  view.expressionLabel = ascii<12>("WAH");
+  renderer.render(view);
+
+  EXPECT_TRUE(has_rect_in(target, 0, midi::display::FooterY,
+                          midi::display::ScreenWidth, midi::display::FooterHeight));
 }
 
 TEST(LiveRenderer, OnlyUpdatesChangedQuadrantAndExpressionFooter) {
