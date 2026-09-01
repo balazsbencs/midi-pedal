@@ -18,6 +18,8 @@ pnpm check
 
 Read the [approved design](docs/superpowers/specs/2026-09-01-midi-controller-pedal-design.md) and [implementation roadmap](docs/superpowers/plans/2026-09-01-midi-controller-pedal-implementation-plan.md) before building hardware.
 
+The portable configuration and USB frame contracts are documented in [docs/protocol.md](docs/protocol.md). The phase plans define the exact firmware, editor, hardware, and release gates while implementation is in progress.
+
 ## Repository map
 
 - `packages/protocol/` — shared JSON schema, binary image, and USB frame contracts.
@@ -26,6 +28,8 @@ Read the [approved design](docs/superpowers/specs/2026-09-01-midi-controller-ped
 - `hardware/` — KiCad carrier PCB, enclosure drawings, and fabrication outputs.
 - `docs/` — build, flashing, hosting, assembly, protocol, troubleshooting, and acceptance guides.
 - `tools/` — validation, HIL, and release tooling.
+
+Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [editor hosting](docs/editor-hosting.md), [hardware assembly](docs/hardware-assembly.md), [protocol](docs/protocol.md), and [troubleshooting](docs/troubleshooting.md).
 
 ## Build and flash
 

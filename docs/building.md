@@ -26,6 +26,15 @@ pnpm check
 
 The complete command builds host tests and runs the TypeScript and C++ suites. Build directories are generated under `build/` and must not be committed.
 
+To regenerate the language-neutral configuration images after editing a JSON fixture:
+
+```bash
+pnpm --filter @midi-pedal/protocol fixtures
+git diff --exit-code protocol/fixtures
+```
+
+The binary layout and USB frame contract are documented in [protocol.md](protocol.md).
+
 ## Current implementation status
 
 Firmware, editor, protocol fixtures, and fabrication commands are added phase by phase. Once those phases land, this guide will contain the exact Debug and Release artifact paths, Pico SDK environment variables, editor typecheck/test/build commands, HIL simulation command, and one all-check command. If a command here differs from the phase plan, use the phase plan until this guide is updated and verified.

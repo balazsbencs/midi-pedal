@@ -1,0 +1,45 @@
+name: contracts
+
+on:
+  push:
+    paths:
+      - "packages/protocol/**"
+      - "protocol/fixtures/**"
+      - "firmware/src/core/**"
+      - "firmware/tests/image_reader_test.cpp"
+      - "tools/generate-protocol-fixtures.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/contracts.yml"
+  pull_request:
+    paths:
+      - "packages/protocol/**"
+      - "protocol/fixtures/**"
+      - "firmware/src/core/**"
+      - "firmware/tests/image_reader_test.cpp"
+      - "tools/generate-protocol-fixtures.ts"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/contracts.yml"
+
+jobs:
+  contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: corepack enable
+      - run: corepack prepare pnpm@10.15.0 --activate
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @midi-pedal/protocol fixtures
+      - run: pnpm --filter @midi-pedal/protocol typecheck
+      - run: pnpm --filter @midi-pedal/protocol test
+      - run: cmake --preset host-debug
+      - run: cmake --build --preset host-debug
+      - run: ctest --preset host-debug --output-on-failure
+      - run: git diff --exit-code protocol/fixtures
