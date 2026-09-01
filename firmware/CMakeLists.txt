@@ -9,6 +9,7 @@ endif()
 add_library(midi_core
   src/core/crc32.cpp
   src/core/image_reader.cpp
+  src/core/switch_engine.cpp
   src/app/controller.cpp
 )
 target_include_directories(midi_core PUBLIC src)
@@ -21,6 +22,9 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(controller_boot_test tests/controller_boot_test.cpp)
   target_link_libraries(controller_boot_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(switch_engine_test tests/switch_engine_test.cpp)
+  target_link_libraries(switch_engine_test PRIVATE midi_core GTest::gtest_main)
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
@@ -37,4 +41,5 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   include(GoogleTest)
   gtest_discover_tests(image_reader_test)
   gtest_discover_tests(controller_boot_test)
+  gtest_discover_tests(switch_engine_test)
 endif()
