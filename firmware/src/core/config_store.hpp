@@ -25,6 +25,7 @@ struct ActiveImageInfo {
   std::uint32_t sequence{};
   std::uint32_t image_size{};
   std::uint32_t image_crc32{};
+  std::uint16_t bank_count{};
 };
 
 class ConfigStore {
@@ -45,6 +46,7 @@ class ConfigStore {
   bool verify_upload();
   bool activate_upload();
   bool load_bank(std::uint8_t bank_index, BankConfig& output) const;
+  bool read_active_bank_record(std::uint8_t bank_index, std::span<std::byte> output, std::size_t& size) const;
 
  private:
   struct Upload {

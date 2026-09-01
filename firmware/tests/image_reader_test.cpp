@@ -38,6 +38,23 @@ TEST(ImageReader, LoadsGoldenBankWithoutAllocation) {
   EXPECT_EQ(bank.pages[0].presets.size(), 4U);
 }
 
+TEST(ImageReader, ExposesValidatedBankRecordWithoutCopying) {
+  auto bytes = read_fixture("minimal-valid.bin");
+  midi::ImageReader reader(std::span<const std::byte>(bytes.data(), bytes.size()));
+  const auto record = reader.bank_record(0);
+  ASSERT_FALSE(record.empty());
+  ASSERT_GE(record.size(), 4U);
+  const auto record_size = static_cast<std::uint32_t>(std::to_integer<std::uint8_t>(record[0]) |
+    (std::to_integer<std::uint8_t>(record[1]) << 8u) |
+    (std::to_integer<std::uint8_t>(record[2]) << 16u) |
+    (std::to_integer<std::uint8_t>(record[3]) << 24u));
+  EXPECT_EQ(record_size, record.size());
+  const auto offset = static_cast<std::size_t>(record.data() - bytes.data());
+  ASSERT_LT(offset + 4, bytes.size());
+  bytes[offset + 4] ^= std::byte{0x01};
+  EXPECT_EQ(record[4], bytes[offset + 4]);
+}
+
 TEST(ImageReader, RejectsTruncatedHeaderAndLeavesOutputZeroed) {
   auto bytes = read_fixture("minimal-valid.bin");
   bytes.resize(31);

@@ -39,8 +39,11 @@ struct DisplayPort {
   virtual void present(const LiveView& view) = 0;
 };
 
-struct ConfigStore {
-  virtual ~ConfigStore() = default;
+// Hardware-facing read-only configuration status hook. The persistent image
+// implementation lives in core/config_store.hpp and intentionally owns the
+// ConfigStore name.
+struct ConfigReader {
+  virtual ~ConfigReader() = default;
   virtual bool read_active_config() = 0;
 };
 

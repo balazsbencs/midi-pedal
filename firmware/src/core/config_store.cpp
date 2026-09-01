@@ -75,7 +75,9 @@ void ConfigStore::scan() {
   if (!selected.has_value()) return;
   active_metadata_index_ = *selected;
   const auto& metadata = metadata_[*selected];
-  active_ = ActiveImageInfo{metadata.slot, metadata.generation, metadata.sequence, metadata.image_size, metadata.image_crc32};
+  const auto* mapped = flash_.mapped(slot_offset(metadata.slot), metadata.image_size);
+  const auto inspection = mapped == nullptr ? ImageInspection{ImageError::Truncated} : ImageReader(std::span<const std::byte>(mapped, metadata.image_size)).inspect();
+  active_ = ActiveImageInfo{metadata.slot, metadata.generation, metadata.sequence, metadata.image_size, metadata.image_crc32, inspection.bankCount};
 }
 
 bool ConfigStore::begin_upload(std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) {
@@ -134,6 +136,19 @@ bool ConfigStore::load_bank(std::uint8_t bank_index, BankConfig& output) const {
   const auto* mapped = flash_.mapped(slot_offset(active_->slot), active_->image_size);
   if (mapped == nullptr) return false;
   return ImageReader(std::span<const std::byte>(mapped, active_->image_size)).load_bank(bank_index, output);
+}
+
+bool ConfigStore::read_active_bank_record(std::uint8_t bank_index, std::span<std::byte> output, std::size_t& size) const {
+  size = 0;
+  if (!active_.has_value()) return false;
+  const auto* mapped = flash_.mapped(slot_offset(active_->slot), active_->image_size);
+  if (mapped == nullptr) return false;
+  const auto record = ImageReader(std::span<const std::byte>(mapped, active_->image_size)).bank_record(bank_index);
+  if (record.empty()) return false;
+  if (output.size() < record.size()) return false;
+  size = record.size();
+  std::copy(record.begin(), record.end(), output.begin());
+  return true;
 }
 
 }  // namespace midi

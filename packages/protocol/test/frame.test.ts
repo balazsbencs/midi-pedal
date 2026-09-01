@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { Command, FrameDecoder, StatusCode, encodeFrame } from "../src/frame.js";
+import { Command, FrameDecoder, StatusCode, encodeFrame, encodeReadConfigPayload } from "../src/frame.js";
 
 describe("USB configuration frames", () => {
+  it("encodes a bounded bank index for READ_CONFIG", () => {
+    expect(encodeReadConfigPayload(7)).toEqual(new Uint8Array([7]));
+    expect(() => encodeReadConfigPayload(128)).toThrow(/bankIndex/);
+  });
+
   it("reassembles arbitrary serial chunks", () => {
     const bytes = encodeFrame({ requestId: 42, command: Command.GET_CAPABILITIES, flags: 0, payload: new Uint8Array() });
     const decoder = new FrameDecoder();

@@ -1,6 +1,6 @@
 import {
-  Command, FrameDecoder, encodeBeginUploadPayload, encodeFrame, encodeImage,
-  encodeWriteChunkPayload, inspectImage, type ConfigV1, type ConfigDocumentV1
+  Command, FrameDecoder, decodeBankRecord, encodeBeginUploadPayload, encodeFrame, encodeImage,
+  encodeReadConfigPayload, encodeWriteChunkPayload, inspectImage, type Bank, type ConfigV1, type ConfigDocumentV1
 } from "@midi-pedal/protocol";
 
 import { validateConfig } from "@midi-pedal/protocol";
@@ -16,7 +16,7 @@ export class DeviceSessionError extends Error {
 export interface SessionOptions { timeoutMs?: number; }
 export interface SyncProgress { stage: "BEGIN" | "WRITE" | "VERIFY" | "ACTIVATE" | "READBACK"; completed: number; total: number; }
 export interface DeviceCapabilities { deviceModel: string; protocolVersion: number; configSchema: number; imageFormat: number; [key: string]: unknown }
-export interface ConfigInfo { sequence: number; imageSize: number; imageCrc32: number; activeSlot: "A" | "B" }
+export interface ConfigInfo { sequence: number; imageSize: number; imageCrc32: number; activeSlot: "A" | "B"; bankCount: number }
 export interface SyncResult { ok: true; activeCrc32: number; metadata: ConfigInfo }
 
 export class DeviceSession {
@@ -58,9 +58,22 @@ export class DeviceSession {
   }
 
   async readConfiguration(): Promise<ConfigDocumentV1> {
-    const payload = await this.request(Command.READ_CONFIG, new Uint8Array());
-    const value = this.parseJsonResponse<unknown>(payload);
-    const result = validateConfig(value);
+    const info = this.info ?? await this.getConfigInfo();
+    if (!Number.isInteger(info.bankCount) || info.bankCount < 0 || info.bankCount > 128) {
+      throw new DeviceSessionError("INVALID_CONFIGURATION", "pedal returned an invalid bank count");
+    }
+    const banks: Bank[] = [];
+    for (let index = 0; index < info.bankCount; index += 1) {
+      let bank: Bank;
+      try {
+        bank = decodeBankRecord(await this.request(Command.READ_CONFIG, encodeReadConfigPayload(index)));
+      } catch (error) {
+        if (error instanceof DeviceSessionError) throw error;
+        throw new DeviceSessionError("INVALID_CONFIGURATION", `pedal returned an invalid bank record (${index + 1})`);
+      }
+      banks.push(bank);
+    }
+    const result = validateConfig({ schemaVersion: 1, deviceModel: "MIDI_PEDAL_PICO2", banks });
     if (!result.ok) throw new DeviceSessionError("INVALID_CONFIGURATION", "pedal returned an invalid configuration");
     return result.value;
   }

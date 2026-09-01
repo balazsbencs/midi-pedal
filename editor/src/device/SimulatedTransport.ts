@@ -1,4 +1,4 @@
-import { Command, decodeImage, encodeFrame, inspectImage, validateConfig, type Frame } from "@midi-pedal/protocol";
+import { Command, decodeImage, encodeBankRecord, encodeFrame, inspectImage, validateConfig, type Frame } from "@midi-pedal/protocol";
 
 import { makeFactoryDocument } from "../domain/editor_state";
 import { encodeImage, serializeConfigDocument, type ConfigDocumentV1 } from "@midi-pedal/protocol";
@@ -10,6 +10,7 @@ const decoder = new TextDecoder();
 function jsonBytes(value: unknown): Uint8Array { return encoder.encode(JSON.stringify(value)); }
 function parseJson<T>(bytes: Uint8Array): T { return JSON.parse(decoder.decode(bytes)) as T; }
 function ok(payload: unknown = {}): Uint8Array { return new Uint8Array([0, ...jsonBytes(payload)]); }
+function okBytes(payload: Uint8Array): Uint8Array { return new Uint8Array([0, ...payload]); }
 function failure(code: string): Uint8Array { return new Uint8Array([1, ...jsonBytes({ code })]); }
 
 export class SimulatedTransport implements DeviceTransport {
@@ -70,9 +71,13 @@ export class SimulatedTransport implements DeviceTransport {
     if (frame.command === Command.GET_CAPABILITIES) return { requestId: frame.requestId, command: frame.command, flags: 0, payload: ok(this.capabilities) };
     if (frame.command === Command.GET_CONFIG_INFO) {
       const metadata = inspectImage(this.activeImage);
-      return { requestId: frame.requestId, command: frame.command, flags: 0, payload: ok({ sequence: metadata.sequence, imageSize: metadata.imageSize, imageCrc32: metadata.crc32, activeSlot: "A" }) };
+      return { requestId: frame.requestId, command: frame.command, flags: 0, payload: ok({ sequence: metadata.sequence, imageSize: metadata.imageSize, imageCrc32: metadata.crc32, activeSlot: "A", bankCount: this.config.config.banks.length }) };
     }
-    if (frame.command === Command.READ_CONFIG) return { requestId: frame.requestId, command: frame.command, flags: 0, payload: ok(serializeConfigDocument(this.config)) };
+    if (frame.command === Command.READ_CONFIG) {
+      if (frame.payload.length !== 1) return { requestId: frame.requestId, command: frame.command, flags: 0, payload: failure("INVALID_FRAME") };
+      const bank = this.config.config.banks[frame.payload[0]!];
+      return bank ? { requestId: frame.requestId, command: frame.command, flags: 0, payload: okBytes(encodeBankRecord(bank)) } : { requestId: frame.requestId, command: frame.command, flags: 0, payload: failure("INVALID_CONFIGURATION") };
+    }
     if (frame.command === Command.BEGIN_UPLOAD) {
       const size = new DataView(frame.payload.buffer, frame.payload.byteOffset, frame.payload.byteLength).getUint32(0, true);
       this.staged = new Uint8Array(size);

@@ -36,7 +36,9 @@ The host waits 1000 ms for a response and makes three total attempts. A response
 | 9 | `SET_EXPRESSION_CALIBRATION` | heel ADC `u16`, toe ADC `u16` |
 | 10 | `FACTORY_EMPTY_RESET` | empty |
 
-`GET_CAPABILITIES` reports the device model, firmware version, protocol version, config schema, image format, queue capacity, supported destinations, and expression/relay/display capabilities. `GET_CONFIG_INFO` reports the active image sequence, length, CRC, and active slot. `READ_CONFIG` returns the requested bank record from the active validated image.
+`GET_CAPABILITIES` reports the device model, firmware version, protocol version, config schema, image format, queue capacity, supported destinations, and expression/relay/display capabilities. `GET_CONFIG_INFO` reports the active image sequence, length, CRC, active slot, and `bankCount`. `READ_CONFIG` returns the exact binary bank record for the requested index, including its leading little-endian record length; it does not return JSON. A host reconstructs the complete document by requesting indexes `0..bankCount-1` and decoding each record with the shared image codec.
+
+The current firmware USB identity is vendor ID `0x2E8A`, product ID `0x4001`, with one CDC ACM configuration interface and one class-compliant USB-MIDI streaming interface. USB serial text uses the Pico's unique board identifier, so a host can distinguish multiple pedals on the same machine.
 
 ## Synchronization lifecycle
 
@@ -48,7 +50,7 @@ The host waits 1000 ms for a response and makes three total attempts. A response
 6. Send `ACTIVATE_UPLOAD`; firmware advances the active marker only after verification.
 7. Query `GET_CONFIG_INFO` and compare the active sequence, length, and CRC with the compiled image.
 
-Power loss, disconnect, malformed data, a missing chunk, or failed CRC leaves the previous active image selected. The editor reports that previous configuration as intact and may reconnect and retry. `FACTORY_EMPTY_RESET` writes and activates the checked-in empty image; it never changes firmware.
+Power loss, disconnect, malformed data, a missing chunk, or failed CRC leaves the previous active image selected. The editor reports that previous configuration as intact and may reconnect and retry. `FACTORY_EMPTY_RESET` validates and activates the embedded copy generated from `firmware/defaults/factory-empty.bin`; it never changes firmware.
 
 ## Expression calibration
 

@@ -192,6 +192,19 @@ function readBank(reader: Reader): Bank {
   return { id, name, pages, expression };
 }
 
+/** Encode one length-prefixed bank record for the device READ_CONFIG response. */
+export function encodeBankRecord(bank: Bank): Uint8Array {
+  return writeBank(bank);
+}
+
+/** Decode one length-prefixed bank record returned by the device. */
+export function decodeBankRecord(bytes: Uint8Array): Bank {
+  const reader = new Reader(bytes);
+  const bank = readBank(reader);
+  if (reader.position !== bytes.length) throw new ImageError("RECORD_LENGTH", "bank response has trailing bytes");
+  return bank;
+}
+
 function checkedU32(value: number, label: string): number {
   if (!Number.isInteger(value) || value < 0 || value > 0xffffffff) throw new ImageError("RANGE", `${label} must be uint32`);
   return value >>> 0;

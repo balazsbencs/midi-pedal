@@ -25,6 +25,17 @@ describe("device session", () => {
     expect(transport.requestIds().map((id, index, ids) => index === 0 || id !== ids[index - 1]).filter(Boolean).length).toBeGreaterThan(1);
   });
 
+  it("reads each bank as a bounded binary record", async () => {
+    const transport = new SimulatedTransport();
+    const session = new DeviceSession(transport, { timeoutMs: 50 });
+    await session.connect();
+
+    const document = await session.readConfiguration();
+
+    expect(document.config.banks).toHaveLength(128);
+    expect(transport.commands().filter(command => command === Command.READ_CONFIG)).toHaveLength(128);
+  });
+
   it("rejects an incompatible capability response before reading config", async () => {
     const transport = new SimulatedTransport().withCapabilities({ deviceModel: "OTHER_DEVICE" });
     const session = new DeviceSession(transport, { timeoutMs: 20 });

@@ -142,6 +142,11 @@ export class FrameDecoder {
 export interface BeginUploadPayload { imageSize: number; sequence: number; crc32: number }
 export interface WriteChunkPayload { offset: number; data: Uint8Array }
 
+export function encodeReadConfigPayload(bankIndex: number): Uint8Array {
+  if (!Number.isInteger(bankIndex) || bankIndex < 0 || bankIndex > 127) throw new RangeError("bankIndex must be 0–127");
+  return new Uint8Array([bankIndex]);
+}
+
 export function encodeBeginUploadPayload(payload: BeginUploadPayload): Uint8Array {
   const output = new Uint8Array(12); const view = new DataView(output.buffer);
   view.setUint32(0, u32(payload.imageSize, "imageSize"), true);

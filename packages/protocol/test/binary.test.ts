@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import fullBoundary from "../../../protocol/fixtures/json/full-boundary-valid.json" with { type: "json" };
 import minimal from "../../../protocol/fixtures/json/minimal-valid.json" with { type: "json" };
-import { decodeImage, encodeImage, inspectImage } from "../src/binary.js";
+import { decodeBankRecord, decodeImage, encodeBankRecord, encodeImage, inspectImage } from "../src/binary.js";
 import { validateConfig } from "../src/validate.js";
 
 const minimalResult = validateConfig(minimal);
@@ -11,6 +11,20 @@ const minimalConfig = minimalResult.value.config;
 const fullConfig = fullResult.value.config;
 
 describe("binary configuration image v1", () => {
+  it("round-trips an individual bank record for device readback", () => {
+    const bank = structuredClone(minimalConfig.banks[0]!);
+    bank.name = "READBACK";
+    bank.pages[0]!.presets[0]!.slots.push({
+      id: 0x777,
+      trigger: "PRESS",
+      position: "BOTH",
+      message: { type: "CC", channel: 1, controller: 12, value: 99, destination: "USB" },
+    });
+
+    const encoded = encodeBankRecord(bank);
+    expect(decodeBankRecord(encoded)).toEqual(bank);
+  });
+
   it("writes the fixed 32-byte v1 header", () => {
     const image = encodeImage(minimalConfig, 7);
     expect(new TextDecoder().decode(image.slice(0, 4))).toBe("MPDL");

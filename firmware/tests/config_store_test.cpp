@@ -85,6 +85,11 @@ TEST(ConfigStore, ActivatesValidatedImageAndReportsMetadata) {
   EXPECT_EQ(info->slot, 0U);
   midi::BankConfig bank{};
   EXPECT_TRUE(store.load_bank(0, bank));
+  std::array<std::byte, 4096> record{};
+  std::size_t record_size = 0;
+  EXPECT_TRUE(store.read_active_bank_record(0, record, record_size));
+  EXPECT_GT(record_size, 4U);
+  EXPECT_EQ(std::to_integer<std::uint8_t>(record[0]), record_size & 0xffU);
 }
 
 TEST(ConfigStore, RejectsMisalignedOrOutOfBoundsChunks) {

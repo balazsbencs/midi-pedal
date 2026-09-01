@@ -18,7 +18,10 @@ add_library(midi_core
   src/display/font_ascii.cpp
   src/usb/usb_descriptors.c
   src/usb/usb_transport.cpp
+  src/usb/protocol_dispatcher.cpp
+  src/usb/pico_usb.cpp
   src/app/controller.cpp
+  src/app/controller_protocol_service.cpp
 )
 set_source_files_properties(src/usb/usb_descriptors.c PROPERTIES LANGUAGE CXX)
 target_include_directories(midi_core PUBLIC src)
@@ -26,6 +29,7 @@ target_compile_features(midi_core PUBLIC cxx_std_20)
 
 add_library(pico_hal
   src/hal/pico_expression_adc.cpp
+  src/hal/pico_flash_port.cpp
   src/hal/pico_relays.cpp
   src/hal/pico_switches.cpp
   src/hal/pico_uart_midi.cpp
@@ -42,6 +46,10 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 
   add_executable(controller_boot_test tests/controller_boot_test.cpp)
   target_link_libraries(controller_boot_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(controller_protocol_service_test tests/controller_protocol_service_test.cpp)
+  target_link_libraries(controller_protocol_service_test PRIVATE midi_core GTest::gtest_main)
+  target_compile_definitions(controller_protocol_service_test PRIVATE MIDI_PEDAL_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
   add_executable(switch_engine_test tests/switch_engine_test.cpp)
   target_link_libraries(switch_engine_test PRIVATE midi_core GTest::gtest_main)
@@ -68,6 +76,12 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   add_executable(usb_transport_test tests/usb_transport_test.cpp)
   target_link_libraries(usb_transport_test PRIVATE midi_core GTest::gtest_main)
 
+  add_executable(pico_usb_port_test tests/pico_usb_port_test.cpp)
+  target_link_libraries(pico_usb_port_test PRIVATE midi_core GTest::gtest_main)
+
+  add_executable(protocol_dispatcher_test tests/protocol_dispatcher_test.cpp)
+  target_link_libraries(protocol_dispatcher_test PRIVATE midi_core GTest::gtest_main)
+
   add_executable(pico_hal_contract_test tests/pico_hal_contract_test.cpp)
   target_link_libraries(pico_hal_contract_test PRIVATE pico_hal GTest::gtest_main)
 
@@ -81,11 +95,21 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
 endif()
 
 if(MIDI_PEDAL_BUILD_FIRMWARE)
-  add_executable(midi_pedal src/main.cpp)
-  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core pico_stdlib hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma)
+  set(FACTORY_IMAGE_OBJECT ${CMAKE_CURRENT_BINARY_DIR}/factory_empty_image.o)
+  add_custom_command(
+    OUTPUT ${FACTORY_IMAGE_OBJECT}
+    COMMAND ${CMAKE_OBJCOPY} -I binary -O elf32-littlearm -B arm
+            --rename-section .data=.rodata,alloc,load,readonly,data,contents
+            firmware/defaults/factory-empty.bin ${FACTORY_IMAGE_OBJECT}
+    DEPENDS ${CMAKE_SOURCE_DIR}/firmware/defaults/factory-empty.bin
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    VERBATIM
+  )
+  add_executable(midi_pedal src/main.cpp src/usb/pico_usb_device.cpp ${FACTORY_IMAGE_OBJECT})
+  target_link_libraries(midi_pedal PRIVATE pico_hal midi_core tinyusb_device pico_stdlib pico_unique_id hardware_gpio hardware_uart hardware_spi hardware_adc hardware_flash hardware_sync hardware_dma)
   target_include_directories(midi_pedal PRIVATE src)
   target_compile_definitions(midi_pedal PRIVATE PICO_ON_DEVICE=1)
-  pico_enable_stdio_usb(midi_pedal 1)
+  pico_enable_stdio_usb(midi_pedal 0)
   pico_enable_stdio_uart(midi_pedal 0)
   pico_add_extra_outputs(midi_pedal)
 endif()
@@ -94,6 +118,7 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   include(GoogleTest)
   gtest_discover_tests(image_reader_test)
   gtest_discover_tests(controller_boot_test)
+  gtest_discover_tests(controller_protocol_service_test)
   gtest_discover_tests(switch_engine_test)
   gtest_discover_tests(midi_queue_test)
   gtest_discover_tests(action_engine_test)
@@ -102,6 +127,8 @@ if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
   gtest_discover_tests(frame_decoder_test)
   gtest_discover_tests(usb_descriptor_test)
   gtest_discover_tests(usb_transport_test)
+  gtest_discover_tests(pico_usb_port_test)
+  gtest_discover_tests(protocol_dispatcher_test)
   gtest_discover_tests(pico_hal_contract_test)
   gtest_discover_tests(live_renderer_test)
 endif()

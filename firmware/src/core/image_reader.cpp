@@ -150,15 +150,20 @@ ImageInspection ImageReader::inspect() const {
 
 bool ImageReader::load_bank(std::uint8_t bankIndex, BankConfig& output) const {
   output = {};
+  const auto record = bank_record(bankIndex);
+  return !record.empty() && read_bank_record(record, output);
+}
+
+std::span<const std::byte> ImageReader::bank_record(std::uint8_t bankIndex) const {
   const auto inspection = inspect();
-  if (inspection.error != ImageError::None || bankIndex >= inspection.bankCount) return false;
+  if (inspection.error != ImageError::None || bankIndex >= inspection.bankCount) return {};
   const auto relativeOffset = get_u32(bytes_, kHeaderSize + static_cast<std::size_t>(bankIndex) * 4);
-  if (relativeOffset == kEmptyOffset || relativeOffset >= bytes_.size() - kPayloadOffset) return false;
+  if (relativeOffset == kEmptyOffset || relativeOffset >= bytes_.size() - kPayloadOffset) return {};
   const auto recordStart = kPayloadOffset + relativeOffset;
-  if (recordStart + 4 > bytes_.size()) return false;
+  if (recordStart + 4 > bytes_.size()) return {};
   const auto recordLength = get_u32(bytes_, recordStart);
-  if (recordLength < 4 || recordLength > bytes_.size() - recordStart) return false;
-  return read_bank_record(bytes_.subspan(recordStart, recordLength), output);
+  if (recordLength < 4 || recordLength > bytes_.size() - recordStart) return {};
+  return bytes_.subspan(recordStart, recordLength);
 }
 
 }  // namespace midi
