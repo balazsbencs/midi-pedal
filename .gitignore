@@ -1,0 +1,17 @@
+# Local Superpowers brainstorming companion artifacts
+.superpowers/
+
+# Build output
+build/
+dist/
+coverage/
+
+# Local tool state
+.cache/
+.idea/
+.vscode/
+node_modules/
+
+# Operating-system files
+.DS_Store
+Thumbs.db
