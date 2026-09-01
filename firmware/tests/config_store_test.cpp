@@ -72,6 +72,25 @@ void upload_and_activate(midi::ConfigStore& store, const std::vector<std::byte>&
   ASSERT_TRUE(store.verify_upload());
   ASSERT_TRUE(store.activate_upload());
 }
+
+void upload_and_verify(midi::ConfigStore& store, const std::vector<std::byte>& image, std::uint32_t sequence) {
+  ASSERT_TRUE(store.begin_upload(static_cast<std::uint32_t>(image.size()), sequence, u32(image, 28)));
+  for (std::size_t offset = 0; offset < image.size(); offset += 1024) {
+    const auto length = std::min<std::size_t>(1024, image.size() - offset);
+    ASSERT_TRUE(store.write_chunk(static_cast<std::uint32_t>(offset), std::span<const std::byte>(image.data() + offset, length)));
+  }
+  ASSERT_TRUE(store.verify_upload());
+}
+
+std::vector<std::byte> with_sequence(std::vector<std::byte> image, std::uint8_t sequence) {
+  image[12] = static_cast<std::byte>(sequence);
+  const auto crc = midi::crc32_with_zeroed_range(image, 28, 4);
+  image[28] = static_cast<std::byte>(crc & 0xffu);
+  image[29] = static_cast<std::byte>((crc >> 8u) & 0xffu);
+  image[30] = static_cast<std::byte>((crc >> 16u) & 0xffu);
+  image[31] = static_cast<std::byte>((crc >> 24u) & 0xffu);
+  return image;
+}
 }  // namespace
 
 TEST(ConfigStore, ActivatesValidatedImageAndReportsMetadata) {
@@ -176,4 +195,81 @@ TEST(ConfigStore, PowerCutDuringCalibrationWriteKeepsThePreviousCalibration) {
   midi::ConfigStore rebooted(flash);
   EXPECT_EQ(rebooted.expression_calibration().heel, 100U);
   EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+}
+
+TEST(ConfigStore, FirstCalibrationLeavesARedundantRecordAfterEitherSectorIsCorrupted) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  ASSERT_TRUE(store.set_expression_calibration({120, 3900}));
+
+  flash.bytes[midi::ConfigStore::MetadataAOffset + 32] = std::byte{0};
+  midi::ConfigStore rebooted(flash);
+
+  EXPECT_EQ(rebooted.expression_calibration().heel, 120U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+}
+
+TEST(ConfigStore, FirstCalibrationRetainsARecoverableValueAtEveryWriteCut) {
+  for (std::size_t fail_at = 0; fail_at < 4; ++fail_at) {
+    FakeFlash flash;
+    midi::ConfigStore store(flash);
+    flash.fail_after(fail_at);
+
+    EXPECT_FALSE(store.set_expression_calibration({120, 3900}));
+
+    midi::ConfigStore rebooted(flash);
+    if (fail_at < 2) {
+      EXPECT_EQ(rebooted.expression_calibration().heel, 0U);
+      EXPECT_EQ(rebooted.expression_calibration().toe, 4095U);
+    } else {
+      EXPECT_EQ(rebooted.expression_calibration().heel, 120U);
+      EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+    }
+  }
+}
+
+TEST(ConfigStore, ActiveImageCalibrationRetainsImageAndValueAtEveryWriteCut) {
+  const auto image = fixture();
+  for (std::size_t fail_at = 0; fail_at < 4; ++fail_at) {
+    FakeFlash flash;
+    midi::ConfigStore store(flash);
+    upload_and_activate(store, image, 1);
+    flash.fail_after(fail_at);
+
+    EXPECT_FALSE(store.set_expression_calibration({120, 3900}));
+
+    midi::ConfigStore rebooted(flash);
+    ASSERT_TRUE(rebooted.active_info().has_value());
+    EXPECT_EQ(rebooted.active_info()->sequence, 1U);
+    if (fail_at < 2) {
+      EXPECT_EQ(rebooted.expression_calibration().heel, 0U);
+      EXPECT_EQ(rebooted.expression_calibration().toe, 4095U);
+    } else {
+      EXPECT_EQ(rebooted.expression_calibration().heel, 120U);
+      EXPECT_EQ(rebooted.expression_calibration().toe, 3900U);
+    }
+  }
+}
+
+TEST(ConfigStore, ActivationKeepsASoleCurrentCalibrationAtEveryMetadataWriteCut) {
+  const auto image = fixture();
+  const auto newer = with_sequence(image, 2);
+  for (std::size_t fail_at = 0; fail_at < 4; ++fail_at) {
+    FakeFlash flash;
+    midi::ConfigStore first(flash);
+    upload_and_activate(first, image, 1);
+    ASSERT_TRUE(first.set_expression_calibration({180, 3800}));
+    flash.bytes[midi::ConfigStore::MetadataBOffset + 32] = std::byte{0};
+    midi::ConfigStore store(flash);
+    upload_and_verify(store, newer, 2);
+    flash.fail_after(fail_at);
+
+    EXPECT_FALSE(store.activate_upload());
+
+    midi::ConfigStore rebooted(flash);
+    ASSERT_TRUE(rebooted.active_info().has_value());
+    EXPECT_EQ(rebooted.active_info()->sequence, 1U);
+    EXPECT_EQ(rebooted.expression_calibration().heel, 180U);
+    EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
+  }
 }

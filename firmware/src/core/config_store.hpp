@@ -79,6 +79,7 @@ class ConfigStore {
   void scan();
   Metadata read_metadata(std::uint8_t index) const;
   Settings read_settings(std::uint8_t index) const;
+  [[nodiscard]] std::optional<std::uint8_t> newest_settings_index() const;
   bool image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const;
   bool write_metadata(std::uint8_t index, const Metadata& metadata);
   bool write_sector(std::uint8_t index, const Metadata& metadata, const Settings& settings);

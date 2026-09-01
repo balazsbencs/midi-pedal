@@ -93,6 +93,15 @@ bool ConfigStore::valid_calibration(Calibration calibration) {
   return calibration.toe > calibration.heel && calibration.toe - calibration.heel >= 410u && calibration.toe <= 4095u;
 }
 
+std::optional<std::uint8_t> ConfigStore::newest_settings_index() const {
+  std::optional<std::uint8_t> selected;
+  for (std::uint8_t index = 0; index < 2; ++index) {
+    if (settings_[index].valid &&
+        (!selected.has_value() || newer(settings_[index].generation, settings_[*selected].generation))) selected = index;
+  }
+  return selected;
+}
+
 bool ConfigStore::image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const {
   if (slot > 1 || image_size < 32 || image_size > SlotSize || image_size > MaxImageSize) return false;
   const auto* mapped = flash_.mapped(slot_offset(slot), image_size);
@@ -112,13 +121,7 @@ void ConfigStore::scan() {
   metadata_[1] = read_metadata(1);
   settings_[0] = read_settings(0);
   settings_[1] = read_settings(1);
-  std::optional<std::uint8_t> selected_settings;
-  for (std::uint8_t index = 0; index < 2; ++index) {
-    if (!settings_[index].valid) continue;
-    if (!selected_settings.has_value() || newer(settings_[index].generation, settings_[*selected_settings].generation)) {
-      selected_settings = index;
-    }
-  }
+  const auto selected_settings = newest_settings_index();
   expression_calibration_ = selected_settings.has_value() ? settings_[*selected_settings].calibration : Calibration{0, 4095};
   active_.reset();
   std::optional<std::uint8_t> selected;
@@ -170,22 +173,27 @@ bool ConfigStore::write_sector(std::uint8_t index, const Metadata& metadata, con
 
 bool ConfigStore::set_expression_calibration(Calibration calibration) {
   if (!valid_calibration(calibration)) return false;
-  std::optional<std::uint8_t> selected;
-  for (std::uint8_t index = 0; index < 2; ++index) {
-    if (settings_[index].valid &&
-        (!selected.has_value() || newer(settings_[index].generation, settings_[*selected].generation))) selected = index;
-  }
-  const auto target = selected.has_value() ? static_cast<std::uint8_t>(*selected ^ 1u) : 0u;
+  const auto selected = newest_settings_index();
   const auto next_generation = selected.has_value() ? settings_[*selected].generation + 1u : 1u;
   const Settings next{true, next_generation, calibration};
 
-  const auto other = static_cast<std::uint8_t>(target ^ 1u);
-  if (metadata_[target].valid && !metadata_[other].valid) {
-    if (!write_sector(other, metadata_[target], settings_[other])) return false;
-    metadata_[other] = metadata_[target];
+  if (active_.has_value()) {
+    const auto active_index = active_metadata_index_;
+    const auto peer_index = static_cast<std::uint8_t>(active_index ^ 1u);
+    const auto active_metadata = metadata_[active_index];
+    if (!write_sector(peer_index, active_metadata, next)) return false;
+    metadata_[peer_index] = active_metadata;
+    settings_[peer_index] = next;
+    if (!write_sector(active_index, active_metadata, next)) return false;
+    settings_[active_index] = next;
+  } else {
+    const auto first_index = selected.has_value() ? static_cast<std::uint8_t>(*selected ^ 1u) : 0u;
+    const auto second_index = static_cast<std::uint8_t>(first_index ^ 1u);
+    if (!write_sector(first_index, metadata_[first_index], next)) return false;
+    settings_[first_index] = next;
+    if (!write_sector(second_index, metadata_[second_index], next)) return false;
+    settings_[second_index] = next;
   }
-  if (!write_sector(target, metadata_[target], next)) return false;
-  settings_[target] = next;
   expression_calibration_ = calibration;
   return true;
 }
@@ -198,7 +206,25 @@ bool ConfigStore::activate_upload() {
   else if (metadata_[0].valid) metadata_index = 1;
   else if (metadata_[1].valid) metadata_index = 0;
   const Metadata next{true, next_generation, upload_.slot, upload_.sequence, upload_.image_size, upload_.image_crc32};
-  if (!write_metadata(metadata_index, next)) return false;
+  const auto peer_index = static_cast<std::uint8_t>(metadata_index ^ 1u);
+  const auto selected_settings = newest_settings_index();
+  const Settings effective_settings = selected_settings.has_value()
+      ? settings_[*selected_settings]
+      : Settings{true, 1, expression_calibration_};
+
+  if (active_.has_value() && active_metadata_index_ == peer_index && !metadata_[metadata_index].valid) {
+    const auto active_metadata = metadata_[active_metadata_index_];
+    if (!write_sector(metadata_index, active_metadata, effective_settings)) return false;
+    metadata_[metadata_index] = active_metadata;
+    settings_[metadata_index] = effective_settings;
+  }
+  const auto peer_metadata = active_.has_value() ? metadata_[active_metadata_index_] : metadata_[peer_index];
+  if (!write_sector(peer_index, peer_metadata, effective_settings)) return false;
+  metadata_[peer_index] = peer_metadata;
+  settings_[peer_index] = effective_settings;
+  if (!write_sector(metadata_index, next, effective_settings)) return false;
+  metadata_[metadata_index] = next;
+  settings_[metadata_index] = effective_settings;
   upload_ = {};
   scan();
   return active_.has_value() && active_->sequence == next.sequence && active_->slot == next.slot;
