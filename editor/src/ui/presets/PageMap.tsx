@@ -26,7 +26,7 @@ export function PageMap({ bank, selectedPage, selectedPreset, onPageSelect, onPr
           </button>
         ))}
       </div>
-      <div id="preset-map" className="preset-map" role="group" aria-label={`Page ${selectedPage + 1} presets`}>
+      <div id="preset-map" className="preset-map" role="tabpanel" aria-label={`Page ${selectedPage + 1} presets`}>
         {page.presets.map((preset, index) => {
           const letter = String.fromCharCode(65 + index);
           const selected = selectedPreset === index;
@@ -51,4 +51,3 @@ export function PageMap({ bank, selectedPage, selectedPreset, onPageSelect, onPr
     </section>
   );
 }
-

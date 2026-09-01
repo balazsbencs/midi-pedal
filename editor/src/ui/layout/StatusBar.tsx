@@ -1,4 +1,5 @@
 import type { EditorState } from "../../domain/editor_state";
+import { ErrorSummary } from "../states/ErrorSummary";
 
 export function StatusBar({ state }: { state: EditorState }) {
   const validation = state.validationErrors.length === 0 ? "Draft valid" : `${state.validationErrors.length} validation error${state.validationErrors.length === 1 ? "" : "s"}`;
@@ -9,7 +10,7 @@ export function StatusBar({ state }: { state: EditorState }) {
       <span>{sync}</span>
       {state.sync.stage === "error" && <span className="status-error">{state.sync.message}</span>}
       {state.sync.stage === "success" && <span className="status-success">{state.sync.message}</span>}
+      <ErrorSummary errors={state.validationErrors} />
     </footer>
   );
 }
-
