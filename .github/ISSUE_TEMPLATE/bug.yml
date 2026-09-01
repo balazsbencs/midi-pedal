@@ -1,0 +1,23 @@
+name: Bug report
+description: Report a reproducible software or firmware problem
+title: "bug: "
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Exact steps, expected result, and observed result.
+    validations:
+      required: true
+  - type: input
+    id: commit
+    attributes:
+      label: Commit/firmware/editor version
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or captures
+      description: Include protocol frames, MIDI capture, console output, or screenshots.
+

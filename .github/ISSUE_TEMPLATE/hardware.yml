@@ -1,0 +1,25 @@
+name: Hardware or safety report
+description: Report a carrier, power, relay, display, or enclosure issue
+title: "hardware: "
+body:
+  - type: input
+    id: revision
+    attributes:
+      label: Board/enclosure revision
+    validations:
+      required: true
+  - type: textarea
+    id: power
+    attributes:
+      label: Power and measurements
+      description: Supply source, polarity, current limit, rail readings, instrument, and temperature.
+    validations:
+      required: true
+  - type: textarea
+    id: assembly
+    attributes:
+      label: Assembly evidence
+      description: Include photos and confirm inspection was performed unpowered first.
+    validations:
+      required: true
+

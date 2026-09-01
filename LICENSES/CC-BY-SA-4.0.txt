@@ -1,0 +1,13 @@
+Creative Commons Attribution-ShareAlike 4.0 International
+
+Project documentation is licensed under CC-BY-SA-4.0. The complete,
+authoritative legal code is available at:
+
+https://creativecommons.org/licenses/by-sa/4.0/legalcode
+
+SPDX-License-Identifier: CC-BY-SA-4.0
+
+Give appropriate credit, link to the license, indicate changes, and distribute
+adaptations under the same license. This notice does not apply to third-party
+documentation retained in the Pico SDK submodule.
+
