@@ -212,7 +212,14 @@ bool ConfigStore::activate_upload() {
       ? settings_[*selected_settings]
       : Settings{true, 1, expression_calibration_};
 
-  if (active_.has_value() && active_metadata_index_ == peer_index && !metadata_[metadata_index].valid) {
+  const auto target_has_current_fallback = metadata_[metadata_index].valid &&
+      image_valid(metadata_[metadata_index].slot, metadata_[metadata_index].image_size,
+                  metadata_[metadata_index].sequence, metadata_[metadata_index].image_crc32) &&
+      settings_[metadata_index].valid &&
+      settings_[metadata_index].generation == effective_settings.generation &&
+      settings_[metadata_index].calibration.heel == effective_settings.calibration.heel &&
+      settings_[metadata_index].calibration.toe == effective_settings.calibration.toe;
+  if (active_.has_value() && active_metadata_index_ == peer_index && !target_has_current_fallback) {
     const auto active_metadata = metadata_[active_metadata_index_];
     if (!write_sector(metadata_index, active_metadata, effective_settings)) return false;
     metadata_[metadata_index] = active_metadata;

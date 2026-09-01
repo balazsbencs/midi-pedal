@@ -273,3 +273,26 @@ TEST(ConfigStore, ActivationKeepsASoleCurrentCalibrationAtEveryMetadataWriteCut)
     EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
   }
 }
+
+TEST(ConfigStore, ActivationPrecopyRequiresAUsableTargetFallbackAtEveryWriteCut) {
+  const auto image = fixture();
+  const auto second = with_sequence(image, 2);
+  const auto third = with_sequence(image, 3);
+  for (std::size_t fail_at = 0; fail_at < 6; ++fail_at) {
+    FakeFlash flash;
+    midi::ConfigStore store(flash);
+    upload_and_activate(store, image, 1);
+    ASSERT_TRUE(store.set_expression_calibration({180, 3800}));
+    upload_and_activate(store, second, 2);
+    upload_and_verify(store, third, 3);
+    flash.fail_after(fail_at);
+
+    EXPECT_FALSE(store.activate_upload());
+
+    midi::ConfigStore rebooted(flash);
+    ASSERT_TRUE(rebooted.active_info().has_value());
+    EXPECT_EQ(rebooted.active_info()->sequence, 2U);
+    EXPECT_EQ(rebooted.expression_calibration().heel, 180U);
+    EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
+  }
+}
