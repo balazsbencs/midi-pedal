@@ -147,6 +147,14 @@ TEST(PedalRuntime, RoutesBothDestinationAndUpdatesToggleView) {
   EXPECT_EQ(usb_api.midi[2], 17U);
   EXPECT_EQ(usb_api.midi[3], 127U);
   EXPECT_EQ(display.views.back().positions[0], 2U);
+
+  runtime.finish_control_phase();
+  switches.mask = 0;
+  runtime.tick(36);
+  runtime.tick(56);
+  EXPECT_TRUE(runtime.live_action_active());
+  runtime.finish_control_phase();
+  EXPECT_FALSE(runtime.live_action_active());
 }
 
 TEST(PedalRuntime, PageChordWrapsAndReloadsExpressionAssignment) {
@@ -172,6 +180,14 @@ TEST(PedalRuntime, PageChordWrapsAndReloadsExpressionAssignment) {
   ASSERT_FALSE(display.views.empty());
   EXPECT_EQ(display.views.back().page, 4U);
   EXPECT_EQ(display.views.back().bank, 1U);
+  EXPECT_TRUE(runtime.live_action_active());
+  runtime.finish_control_phase();
+  EXPECT_FALSE(runtime.live_action_active());
+
+  runtime.tick(635);  // The held chord's repeat is visible before USB dispatch.
+  EXPECT_TRUE(runtime.live_action_active());
+  runtime.finish_control_phase();
+  EXPECT_FALSE(runtime.live_action_active());
 }
 
 TEST(PedalRuntime, MissingImageStartsSafeEmptyWithoutBlockingTheDevice) {
@@ -196,6 +212,15 @@ TEST(PedalRuntime, MissingImageStartsSafeEmptyWithoutBlockingTheDevice) {
   EXPECT_TRUE(same_ascii(display.views.back().bankName, ascii<20>("EMPTY")));
   EXPECT_TRUE(same_ascii(display.views.back().selectedPositions[0].label, ascii<12>("EMPTY")));
   EXPECT_TRUE(same_ascii(display.views.back().expressionLabel, ascii<12>("NONE")));
+
+  switches.mask = 0x01;
+  runtime.tick(0);
+  runtime.tick(35);
+  runtime.finish_control_phase();
+  switches.mask = 0;
+  runtime.tick(36);
+  runtime.tick(56);
+  EXPECT_TRUE(runtime.live_action_active());
 }
 
 TEST(PedalRuntime, PublishesActiveBankPositionAndExpressionLabels) {
@@ -331,5 +356,7 @@ TEST(PedalRuntime, ReportsLiveActionOnlyWhileExecutingASwitchAction) {
   runtime.tick(35);
 
   EXPECT_TRUE(trs.observed_live_action);
+  EXPECT_TRUE(runtime.live_action_active());
+  runtime.finish_control_phase();
   EXPECT_FALSE(runtime.live_action_active());
 }

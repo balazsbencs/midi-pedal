@@ -26,6 +26,7 @@ class FakeFlash final : public midi::FlashPort {
   bool erase(std::uint32_t offset, std::size_t length) override {
     if (should_fail()) return false;
     if (offset + length > bytes.size()) return false;
+    erase_lengths.push_back(length);
     std::fill(bytes.begin() + offset, bytes.begin() + offset + length, std::byte{0xff});
     return true;
   }
@@ -46,6 +47,7 @@ class FakeFlash final : public midi::FlashPort {
   void fail_after(std::size_t operation) { fail_at = operation; operations = 0; }
 
   std::vector<std::byte> bytes;
+  std::vector<std::size_t> erase_lengths;
 
  private:
   bool should_fail() { return fail_at.has_value() && operations++ >= *fail_at; }
@@ -59,10 +61,66 @@ class FakeExpressionInput final : public midi::ExpressionSampleInput {
   std::uint16_t read_adc() const override { return value; }
 };
 
+class RuntimeConfig final : public midi::RuntimeConfigSource {
+ public:
+  midi::RuntimeConfigSnapshot status() const override { return {true, 1, 1}; }
+  bool load_bank(std::uint8_t index, midi::BankConfig& output) const override {
+    if (index != 0) return false;
+    output = bank;
+    return true;
+  }
+
+ private:
+  midi::BankConfig bank{};
+};
+
+class RuntimeSwitches final : public midi::RuntimeSwitchSource {
+ public:
+  std::uint8_t mask{};
+  std::uint8_t read_mask() const override { return mask; }
+};
+
+class RuntimeExpression final : public midi::RuntimeExpressionSource {
+ public:
+  std::uint16_t read_adc() const override { return 2048; }
+};
+
+class RuntimeMidi final : public midi::MidiPort {
+ public:
+  bool enqueue(midi::Destination, midi::MidiMessage) override { return true; }
+};
+
+class RuntimeRelays final : public midi::RelayPort {
+ public:
+  void set(std::uint8_t, bool) override {}
+};
+
+class RuntimeUsbPort final : public midi::usb::UsbPort {
+ public:
+  bool mounted() const override { return true; }
+  bool write_cdc(std::span<const std::byte>) override { return true; }
+  bool write_midi(std::span<const std::uint8_t>) override { return true; }
+};
+
+class RuntimeDisplay final : public midi::DisplayPort {
+ public:
+  void present(const midi::LiveView&) override {}
+};
+
 class FakeLiveAction final : public midi::LiveActionState {
  public:
   bool active{};
   bool live_action_active() const override { return active; }
+};
+
+class RecordingSink final : public midi::usb::ProtocolResponseSink {
+ public:
+  bool write_frame(std::span<const std::byte> frame) override {
+    frames.emplace_back(frame.begin(), frame.end());
+    return true;
+  }
+
+  std::vector<std::vector<std::byte>> frames;
 };
 
 std::vector<std::byte> fixture() {
@@ -78,6 +136,30 @@ std::uint32_t u32(std::span<const std::byte> bytes, std::size_t at) {
     (std::to_integer<std::uint8_t>(bytes[at + 1]) << 8u) |
     (std::to_integer<std::uint8_t>(bytes[at + 2]) << 16u) |
     (std::to_integer<std::uint8_t>(bytes[at + 3]) << 24u));
+}
+
+std::vector<std::byte> request(std::uint32_t request_id, midi::usb::Command command,
+                               std::span<const std::byte> payload) {
+  std::vector<std::byte> bytes(18 + payload.size() + 4);
+  bytes[0] = std::byte{'M'};
+  bytes[1] = std::byte{'P'};
+  bytes[2] = std::byte{'C'};
+  bytes[3] = std::byte{'F'};
+  const auto put16 = [&bytes](std::size_t at, std::uint16_t value) {
+    bytes[at] = static_cast<std::byte>(value & 0xffu);
+    bytes[at + 1] = static_cast<std::byte>(value >> 8u);
+  };
+  const auto put32 = [&bytes](std::size_t at, std::uint32_t value) {
+    for (unsigned shift = 0; shift < 32; shift += 8) bytes[at + shift / 8] = static_cast<std::byte>(value >> shift);
+  };
+  put16(4, 1);
+  put32(6, request_id);
+  put16(10, static_cast<std::uint16_t>(command));
+  put16(12, 0);
+  put32(14, static_cast<std::uint32_t>(payload.size()));
+  std::copy(payload.begin(), payload.end(), bytes.begin() + 18);
+  put32(18 + payload.size(), midi::crc32(std::span<const std::byte>(bytes.data(), 18 + payload.size())));
+  return bytes;
 }
 
 void activate(midi::ConfigStore& store, std::span<const std::byte> image) {
@@ -159,6 +241,9 @@ TEST(ControllerProtocolService, FactoryResetValidatesAndActivatesEmbeddedImage) 
   EXPECT_EQ(info->image_size, image.size());
   EXPECT_EQ(info->image_crc32, u32(image, 28));
   EXPECT_EQ(info->bank_count, 128U);
+  ASSERT_FALSE(flash.erase_lengths.empty());
+  EXPECT_TRUE(std::all_of(flash.erase_lengths.begin(), flash.erase_lengths.end(),
+                          [](std::size_t length) { return length == midi::ConfigStore::MetadataSectorSize; }));
 }
 
 TEST(ControllerProtocolService, RefusesMutationsWhileALiveActionIsExecuting) {
@@ -181,6 +266,45 @@ TEST(ControllerProtocolService, RefusesMutationsWhileALiveActionIsExecuting) {
   EXPECT_EQ(service.set_expression_calibration(100, 3900), midi::usb::ServiceError::Busy);
   EXPECT_EQ(expression.calibration().heel, 0U);
   EXPECT_EQ(expression.calibration().toe, 4095U);
+}
+
+TEST(ControllerProtocolService, DefersMutationsUntilAfterTheProductionControlPhase) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  FakeExpressionInput input;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::ControllerProtocolService service(store, input, expression);
+  RuntimeConfig config;
+  RuntimeSwitches switches;
+  RuntimeExpression expression_input;
+  RuntimeMidi midi;
+  RuntimeRelays relays;
+  RuntimeUsbPort usb_port;
+  midi::usb::UsbTransport usb_midi(usb_port);
+  RuntimeDisplay display;
+  midi::PedalRuntime runtime(config, switches, expression_input, midi, relays, usb_midi, usb_port, display, expression);
+  service.set_live_action_state(&runtime);
+  RecordingSink sink;
+  midi::usb::ProtocolDispatcher dispatcher(service, sink);
+  const std::array begin_payload{std::byte{64}, std::byte{0}, std::byte{0}, std::byte{0},
+                                 std::byte{1}, std::byte{0}, std::byte{0}, std::byte{0},
+                                 std::byte{0}, std::byte{0}, std::byte{0}, std::byte{0}};
+
+  ASSERT_TRUE(runtime.initialize());
+  switches.mask = 0x01;
+  runtime.tick(0);
+  runtime.tick(35);
+  dispatcher.receive(request(1, midi::usb::Command::BeginUpload, begin_payload));
+
+  ASSERT_EQ(sink.frames.size(), 1U);
+  EXPECT_EQ(sink.frames.back()[18], std::byte{1});
+  const std::string busy(reinterpret_cast<const char*>(sink.frames.back().data() + 19), sink.frames.back().size() - 23);
+  EXPECT_NE(busy.find("BUSY"), std::string::npos);
+
+  runtime.finish_control_phase();
+  dispatcher.receive(request(2, midi::usb::Command::BeginUpload, begin_payload));
+  ASSERT_EQ(sink.frames.size(), 2U);
+  EXPECT_EQ(sink.frames.back()[18], std::byte{0});
 }
 
 TEST(ControllerProtocolService, CommitsCalibrationBeforeChangingTheExpressionProcessor) {

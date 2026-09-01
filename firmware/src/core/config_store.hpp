@@ -38,6 +38,8 @@ class ConfigStore {
   static constexpr std::uint32_t MetadataBOffset = 0x3f0000;
   static constexpr std::size_t MetadataSectorSize = 0x1000;
   static constexpr std::size_t MaxImageSize = 768 * 1024;
+  static constexpr std::size_t UploadChunkMaxSize = 1024;
+  static constexpr std::size_t UploadSectorCount = SlotSize / MetadataSectorSize;
 
   explicit ConfigStore(FlashPort& flash);
 
@@ -59,6 +61,7 @@ class ConfigStore {
     std::uint32_t image_size{};
     std::uint32_t sequence{};
     std::uint32_t image_crc32{};
+    std::array<std::uint32_t, (UploadSectorCount + 31u) / 32u> erased_sectors{};
   };
 
   struct Metadata {
@@ -82,6 +85,7 @@ class ConfigStore {
   [[nodiscard]] std::optional<std::uint8_t> newest_settings_index() const;
   bool image_valid(std::uint8_t slot, std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) const;
   bool write_metadata(std::uint8_t index, const Metadata& metadata);
+  bool erase_upload_sectors(std::uint32_t offset, std::size_t length);
   bool write_sector(std::uint8_t index, const Metadata& metadata, const Settings& settings);
   static void write_metadata_record(std::span<std::byte> bytes, const Metadata& metadata);
   static void write_settings_record(std::span<std::byte> bytes, const Settings& settings);

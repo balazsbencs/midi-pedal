@@ -125,27 +125,39 @@ void PedalRuntime::handle_chord(Chord chord) {
 }
 
 void PedalRuntime::handle_event(const SwitchEvent& event) {
-  if (event.kind == SwitchEventKind::ChordRelease) return;
+  if (event.kind == SwitchEventKind::ChordRelease) {
+    live_action_latched_ = true;
+    return;
+  }
   struct ResetLiveAction final {
     bool& active;
-    ~ResetLiveAction() { active = false; }
+    bool& latched;
+    ~ResetLiveAction() {
+      active = false;
+      latched = true;
+    }
   };
   if (event.kind == SwitchEventKind::ChordPress || event.kind == SwitchEventKind::ChordRepeat) {
     live_action_active_ = true;
-    const ResetLiveAction reset{live_action_active_};
+    const ResetLiveAction reset{live_action_active_, live_action_latched_};
     handle_chord(event.chord);
     return;
   }
-  if (!bank_loaded_) return;
+  if (!bank_loaded_) {
+    if (event.kind == SwitchEventKind::Release) live_action_latched_ = true;
+    return;
+  }
   live_action_active_ = true;
-  const ResetLiveAction reset{live_action_active_};
+  const ResetLiveAction reset{live_action_active_, live_action_latched_};
   const auto result = actions_.execute(current_preset(event.switch_id), engine_state_, event);
   if (!result.accepted) queue_overflow_ = true;
 }
 
 void PedalRuntime::tick(std::uint32_t now_ms) {
   refresh_configuration();
-  const auto events = switch_engine_.update(switches_.read_mask(), now_ms);
+  const auto switch_mask = switches_.read_mask();
+  if (switch_mask != 0) live_action_latched_ = true;
+  const auto events = switch_engine_.update(switch_mask, now_ms);
   for (const auto& event : events) handle_event(event);
 
   if (expression_sample_due(now_ms)) {

@@ -22,6 +22,7 @@ class FakeFlash final : public midi::FlashPort {
   bool erase(std::uint32_t offset, std::size_t length) override {
     if (should_fail()) return false;
     if (offset + length > bytes.size()) return false;
+    erase_lengths.push_back(length);
     std::fill(bytes.begin() + offset, bytes.begin() + offset + length, std::byte{0xff});
     return true;
   }
@@ -41,6 +42,7 @@ class FakeFlash final : public midi::FlashPort {
 
   void fail_after(std::size_t operation) { failAt = operation; operations = 0; }
   std::vector<std::byte> bytes;
+  std::vector<std::size_t> erase_lengths;
 
  private:
   bool should_fail() { return failAt.has_value() && operations++ >= *failAt; }
@@ -119,6 +121,22 @@ TEST(ConfigStore, RejectsMisalignedOrOutOfBoundsChunks) {
   ASSERT_TRUE(store.begin_upload(static_cast<std::uint32_t>(image.size()), 1, u32(image, 28)));
   EXPECT_FALSE(store.write_chunk(1, std::span<const std::byte>(image.data(), 8)));
   EXPECT_FALSE(store.write_chunk(static_cast<std::uint32_t>(image.size()), std::span<const std::byte>(image.data(), 1)));
+}
+
+TEST(ConfigStore, DefersAndBoundsFlashErasesToWrittenUploadSectors) {
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  const auto image = fixture();
+
+  ASSERT_TRUE(store.begin_upload(static_cast<std::uint32_t>(image.size()), 1, u32(image, 28)));
+  EXPECT_TRUE(flash.erase_lengths.empty());
+  ASSERT_TRUE(store.write_chunk(0, std::span<const std::byte>(image.data(), 1024)));
+  ASSERT_TRUE(store.write_chunk(1024, std::span<const std::byte>(image.data() + 1024, 1024)));
+  ASSERT_TRUE(store.write_chunk(4096, std::span<const std::byte>(image.data() + 4096, 1024)));
+
+  ASSERT_EQ(flash.erase_lengths.size(), 2U);
+  EXPECT_TRUE(std::all_of(flash.erase_lengths.begin(), flash.erase_lengths.end(),
+                          [](std::size_t length) { return length == midi::ConfigStore::MetadataSectorSize; }));
 }
 
 TEST(ConfigStore, PowerCutBeforeActivationKeepsPreviousSlot) {

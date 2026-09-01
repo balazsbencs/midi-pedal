@@ -50,7 +50,10 @@ class PedalRuntime final : public ActionSink, public LiveActionState {
 
   [[nodiscard]] bool initialize();
   void tick(std::uint32_t now_ms);
-  [[nodiscard]] bool live_action_active() const override { return live_action_active_; }
+  // Main calls this immediately after the USB dispatch phase. It makes action
+  // activity observable to protocol mutations for the complete control loop.
+  void finish_control_phase() { live_action_latched_ = false; }
+  [[nodiscard]] bool live_action_active() const override { return live_action_active_ || live_action_latched_; }
 
   bool send_midi(Destination destination, MidiMessage message) override;
   bool relay(RelayCommand command) override;
@@ -93,6 +96,7 @@ class PedalRuntime final : public ActionSink, public LiveActionState {
   LiveView last_view_{};
   bool have_view_{};
   bool live_action_active_{};
+  bool live_action_latched_{};
 };
 
 }  // namespace midi

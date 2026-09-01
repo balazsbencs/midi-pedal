@@ -23,10 +23,11 @@
 
 The host-tested core, A/B configuration store, composite CDC + USB-MIDI
 protocol path, Pico flash/USB adapters, embedded factory image, and the
-switch/action/expression runtime integration are present on `main`. Physical
-relay, MIDI, expression, display, power, and USB enumeration qualification is
-still required before a stage-use release; watchdog cadence and persistent
-expression settings remain follow-up hardening work.
+switch/action/expression runtime integration are present on `main`.
+Watchdog/reset handling, fixed-rate expression scheduling, persistent
+expression calibration, and upload busy hardening are now implemented.
+Physical relay, MIDI, expression, display, power, and USB enumeration
+qualification is still required before a stage-use release.
 
 ---
 

@@ -128,8 +128,9 @@ int main() {
   protocol.set_live_action_state(&runtime);
   (void)runtime.initialize();
   while (true) {
-    usb.service(dispatcher);
     runtime.tick(to_ms_since_boot(get_absolute_time()));
+    usb.service(dispatcher);
+    runtime.finish_control_phase();
     ports.midi().service();
     watchdog.feed();
     tight_loop_contents();

@@ -140,15 +140,37 @@ void ConfigStore::scan() {
 bool ConfigStore::begin_upload(std::uint32_t image_size, std::uint32_t sequence, std::uint32_t image_crc32) {
   if (image_size == 0 || image_size > SlotSize || image_size > MaxImageSize) return false;
   const auto target_slot = active_.has_value() ? static_cast<std::uint8_t>(active_->slot ^ 1u) : 0u;
-  if (!flash_.erase(slot_offset(target_slot), SlotSize)) return false;
-  upload_ = {true, false, static_cast<std::uint8_t>(target_slot), image_size, sequence, image_crc32};
+  upload_ = {};
+  upload_.active = true;
+  upload_.slot = target_slot;
+  upload_.image_size = image_size;
+  upload_.sequence = sequence;
+  upload_.image_crc32 = image_crc32;
   return true;
 }
 
 bool ConfigStore::write_chunk(std::uint32_t offset, std::span<const std::byte> bytes) {
-  if (!upload_.active || bytes.empty() || bytes.size() > 1024 || offset >= upload_.image_size || offset + bytes.size() > upload_.image_size || (offset % 256u) != 0) return false;
+  if (!upload_.active || bytes.empty() || bytes.size() > UploadChunkMaxSize || offset >= upload_.image_size || offset + bytes.size() > upload_.image_size || (offset % 256u) != 0) return false;
   upload_.verified = false;
+  if (!erase_upload_sectors(offset, bytes.size())) return false;
   return flash_.program(slot_offset(upload_.slot) + offset, bytes);
+}
+
+bool ConfigStore::erase_upload_sectors(std::uint32_t offset, std::size_t length) {
+  const auto first_sector = static_cast<std::size_t>(offset / MetadataSectorSize);
+  const auto last_sector = static_cast<std::size_t>((offset + length - 1u) / MetadataSectorSize);
+  if (last_sector >= UploadSectorCount) return false;
+  for (std::size_t sector = first_sector; sector <= last_sector; ++sector) {
+    const auto word = sector / 32u;
+    const auto bit = static_cast<std::uint32_t>(1u << (sector % 32u));
+    if ((upload_.erased_sectors[word] & bit) != 0) continue;
+    // Erase only one 4 KiB sector; PicoFlashPort disables interrupts around
+    // this individual operation rather than around an entire image slot.
+    if (!flash_.erase(slot_offset(upload_.slot) + static_cast<std::uint32_t>(sector * MetadataSectorSize),
+                      MetadataSectorSize)) return false;
+    upload_.erased_sectors[word] |= bit;
+  }
+  return true;
 }
 
 bool ConfigStore::verify_upload() {
