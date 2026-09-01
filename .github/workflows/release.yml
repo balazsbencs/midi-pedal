@@ -14,14 +14,15 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
       - run: sudo apt-get update
       - run: sudo apt-get install --no-install-recommends ninja-build gcc-arm-none-eabi libnewlib-arm-none-eabi
-      - run: corepack enable
-      - run: corepack prepare pnpm@10.15.0 --activate
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
       - run: pnpm --filter @midi-pedal/editor exec playwright install --with-deps chromium
