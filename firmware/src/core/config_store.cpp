@@ -215,6 +215,11 @@ bool ConfigStore::activate_upload() {
   const auto target_has_current_fallback = metadata_[metadata_index].valid &&
       image_valid(metadata_[metadata_index].slot, metadata_[metadata_index].image_size,
                   metadata_[metadata_index].sequence, metadata_[metadata_index].image_crc32) &&
+      (!active_.has_value() ||
+       (metadata_[metadata_index].slot == metadata_[active_metadata_index_].slot &&
+        metadata_[metadata_index].sequence == metadata_[active_metadata_index_].sequence &&
+        metadata_[metadata_index].image_size == metadata_[active_metadata_index_].image_size &&
+        metadata_[metadata_index].image_crc32 == metadata_[active_metadata_index_].image_crc32)) &&
       settings_[metadata_index].valid &&
       settings_[metadata_index].generation == effective_settings.generation &&
       settings_[metadata_index].calibration.heel == effective_settings.calibration.heel &&

@@ -296,3 +296,30 @@ TEST(ConfigStore, ActivationPrecopyRequiresAUsableTargetFallbackAtEveryWriteCut)
     EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
   }
 }
+
+void expect_stale_but_valid_target_cut(std::size_t fail_at) {
+  const auto image = fixture();
+  const auto second = with_sequence(image, 2);
+  FakeFlash flash;
+  midi::ConfigStore store(flash);
+  upload_and_activate(store, image, 1);
+  ASSERT_TRUE(store.set_expression_calibration({180, 3800}));
+  upload_and_activate(store, second, 2);
+  upload_and_verify(store, image, 1);
+  flash.fail_after(fail_at);
+
+  EXPECT_FALSE(store.activate_upload());
+
+  midi::ConfigStore rebooted(flash);
+  ASSERT_TRUE(rebooted.active_info().has_value());
+  EXPECT_EQ(rebooted.active_info()->sequence, 2U);
+  EXPECT_EQ(rebooted.expression_calibration().heel, 180U);
+  EXPECT_EQ(rebooted.expression_calibration().toe, 3800U);
+}
+
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut0) { expect_stale_but_valid_target_cut(0); }
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut1) { expect_stale_but_valid_target_cut(1); }
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut2) { expect_stale_but_valid_target_cut(2); }
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut3) { expect_stale_but_valid_target_cut(3); }
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut4) { expect_stale_but_valid_target_cut(4); }
+TEST(ConfigStore, ActivationPrecopyRejectsAStaleButImageValidTargetCut5) { expect_stale_but_valid_target_cut(5); }
