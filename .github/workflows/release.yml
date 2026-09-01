@@ -31,8 +31,8 @@ jobs:
           mkdir -p build
           node tools/release/next.mjs --output build/release-metadata.json --notes build/release-notes.md
           {
-            echo "version=$(node -p \"JSON.parse(require('fs').readFileSync('build/release-metadata.json')).version\")"
-            echo "tag=$(node -p \"JSON.parse(require('fs').readFileSync('build/release-metadata.json')).tag\")"
+            echo "version=$(jq -r '.version' build/release-metadata.json)"
+            echo "tag=$(jq -r '.tag' build/release-metadata.json)"
           } >> "$GITHUB_OUTPUT"
 
   build:
@@ -87,7 +87,7 @@ jobs:
         shell: bash
         run: |
           node tools/release/next.mjs --output build/release-metadata.json --notes build/release-notes.md
-          test "$(node -p "JSON.parse(require('fs').readFileSync('build/release-metadata.json')).version")" = "${{ needs.metadata.outputs.version }}"
+          test "$(jq -r '.version' build/release-metadata.json)" = "${{ needs.metadata.outputs.version }}"
       - name: Package release assets
         shell: bash
         env:
