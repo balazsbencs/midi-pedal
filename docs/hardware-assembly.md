@@ -7,6 +7,8 @@ and first-article checklist first.
 
 ## Parts and orientation
 
+- Keep the illustrated [`Pico 2 wiring pinout`](../hardware/pico2-pinout.svg)
+  beside the build. It labels both GPIO numbers and physical header pins.
 - Socket a non-wireless Raspberry Pi Pico 2 so its USB connector remains
   accessible through the enclosure.
 - Mount the ST7796S above the four normally-open footswitches in landscape
@@ -39,4 +41,3 @@ Disconnect USB and 9 V before opening the enclosure. Never connect a relay
 contact to an amplifier switching voltage until an independent isolation review
 has approved that use. Relay outputs are dry contacts, not logic outputs. Do
 not change the display supply selector while powered.
-

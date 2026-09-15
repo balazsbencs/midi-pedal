@@ -9,6 +9,8 @@ switches, relays, and enclosure.
 
 Current repository artifacts:
 
+- [`pico2-pinout.svg`](pico2-pinout.svg) is the illustrated firmware-to-panel
+  wiring reference, including physical Pico 2 header pin numbers.
 - `midi-pedal.kicad_pcb` is a safe board-outline/project starting point; it is
   not a routed production board.
 - `bench/` contains review sheets for protected power and I/O circuits.
@@ -21,4 +23,3 @@ Pico GPIO. The two relay contacts must remain dry, isolated, and normally open.
 Display logic is 3.3 V; verify a breakout's VCC rating before selecting its
 3.3 V/5 V supply jumper. The ST7796S backlight is always on and SDO is not
 routed.
-
