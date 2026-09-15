@@ -1,6 +1,10 @@
 name: editor
 
+permissions:
+  contents: read
+
 on:
+  workflow_dispatch:
   push:
     paths:
       - "editor/**"
@@ -46,3 +50,29 @@ jobs:
         with:
           name: midi-pedal-editor
           path: editor/dist
+      - name: Configure GitHub Pages
+        if: github.ref == 'refs/heads/main'
+        uses: actions/configure-pages@v5
+      - name: Upload GitHub Pages artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: editor/dist
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: editor
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

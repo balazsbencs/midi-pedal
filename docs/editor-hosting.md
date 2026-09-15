@@ -14,6 +14,13 @@ Publish the contents of `editor/dist/` exactly as generated. Vite uses a
 relative asset base, so the site can be mounted at `/`, `/midi-pedal/`, or
 another static subpath without changing JavaScript URLs.
 
+The production editor is hosted at
+[balazsbencs.github.io/midi-pedal](https://balazsbencs.github.io/midi-pedal/).
+Pushes to `main` that change the editor, shared protocol package, workspace
+configuration, or editor workflow are tested, built, and deployed by
+`.github/workflows/editor.yml`. The workflow can also be run manually from the
+GitHub Actions page.
+
 ## Secure context and browser support
 
 WebSerial is supported here in desktop Chromium-based browsers: current
@@ -52,4 +59,3 @@ location /midi-pedal/assets/ {
 Use the same HTTPS hostname for the page and the browser session. The pedal
 itself is connected directly over USB; LAN access to the static site does not
 create a network path to the device.
-

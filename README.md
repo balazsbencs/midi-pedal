@@ -40,7 +40,10 @@ Detailed guides: [building](docs/building.md), [flashing](docs/flashing.md), [ed
 
 Use the verified [build guide](docs/building.md) and [flashing guide](docs/flashing.md). Power hardware only after reading the 9 V center-negative polarity and relay-contact warnings in the [assembly guide](docs/hardware-assembly.md).
 
-The editor is hosted as static files; see [editor hosting](docs/editor-hosting.md).
+The editor is available at
+[balazsbencs.github.io/midi-pedal](https://balazsbencs.github.io/midi-pedal/)
+and is automatically deployed from `main`; see
+[editor hosting](docs/editor-hosting.md).
 The browser connects directly to the pedal over WebSerial and never requires a
 project account or backend. Configuration is intentionally prepared off-stage;
 the pedal has no touch setup or wireless feature.
