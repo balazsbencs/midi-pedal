@@ -89,45 +89,45 @@
   <text x="82" y="858" class="tiny">GPIOs drive transistor/coil stages—not the external contacts.</text>
 
   <g filter="url(#shadow)">
-    <rect class="card" x="1080" y="180" width="472" height="352" rx="24"/>
-    <rect x="1545" y="180" width="7" height="352" rx="3.5" fill="#5ee3b2"/>
+    <rect class="card" x="1080" y="636" width="472" height="352" rx="24"/>
+    <rect x="1545" y="636" width="7" height="352" rx="3.5" fill="#5ee3b2"/>
   </g>
-  <circle cx="1118" cy="221" r="15" fill="#173f37" stroke="#5ee3b2"/>
-  <rect x="1111" y="215" width="14" height="12" rx="2" fill="none" stroke="#b6f7df" stroke-width="2"/>
-  <text x="1144" y="229" class="card-title">ST7796S display • 9-pin header</text>
-  <text x="1114" y="260" class="small">480 × 320 landscape • write-only SPI0 • 3.3 V logic</text>
+  <circle cx="1118" cy="677" r="15" fill="#173f37" stroke="#5ee3b2"/>
+  <rect x="1111" y="671" width="14" height="12" rx="2" fill="none" stroke="#b6f7df" stroke-width="2"/>
+  <text x="1144" y="685" class="card-title">ST7796S display • 9-pin header</text>
+  <text x="1114" y="716" class="small">480 × 320 landscape • write-only SPI0 • 3.3 V logic</text>
   <g class="body mono">
-    <text x="1114" y="301"><tspan fill="#8df0cd" font-weight="800">5 RST</tspan><tspan dx="22">GP21</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 27</tspan></text>
-    <text x="1114" y="340"><tspan fill="#8df0cd" font-weight="800">6 DC</tspan><tspan dx="31">GP20</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 26</tspan></text>
-    <text x="1114" y="379"><tspan fill="#8df0cd" font-weight="800">4 SDA</tspan><tspan dx="22">GP19 / MOSI</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 25</tspan></text>
-    <text x="1114" y="418"><tspan fill="#8df0cd" font-weight="800">3 SCL</tspan><tspan dx="22">GP18 / SCK</tspan><tspan dx="28" fill="#8ea3bf">Pico pin 24</tspan></text>
-    <text x="1114" y="457"><tspan fill="#8df0cd" font-weight="800">7 CS</tspan><tspan dx="31">GP17</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 22</tspan></text>
+    <text x="1114" y="757"><tspan fill="#8df0cd" font-weight="800">5 RST</tspan><tspan dx="22">GP21</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 27</tspan></text>
+    <text x="1114" y="796"><tspan fill="#8df0cd" font-weight="800">6 DC</tspan><tspan dx="31">GP20</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 26</tspan></text>
+    <text x="1114" y="835"><tspan fill="#8df0cd" font-weight="800">4 SDA</tspan><tspan dx="22">GP19 / MOSI</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 25</tspan></text>
+    <text x="1114" y="874"><tspan fill="#8df0cd" font-weight="800">3 SCL</tspan><tspan dx="22">GP18 / SCK</tspan><tspan dx="28" fill="#8ea3bf">Pico pin 24</tspan></text>
+    <text x="1114" y="913"><tspan fill="#8df0cd" font-weight="800">7 CS</tspan><tspan dx="31">GP17</tspan><tspan dx="20" fill="#8ea3bf">Pico pin 22</tspan></text>
   </g>
-  <text x="1114" y="492" class="small"><tspan font-weight="800" fill="#d9e3ef">1 GND</tspan> → GND  •  <tspan font-weight="800" fill="#d9e3ef">2 VCC</tspan> → module-rated supply</text>
-  <text x="1114" y="517" class="tiny"><tspan font-weight="800" fill="#aebdd0">8 BL</tspan> → always on  •  <tspan font-weight="800" fill="#aebdd0">9 SDA-0 / SDO</tspan> → NC  •  logic remains 3.3 V</text>
+  <text x="1114" y="948" class="small"><tspan font-weight="800" fill="#d9e3ef">1 GND</tspan> → GND  •  <tspan font-weight="800" fill="#d9e3ef">2 VCC</tspan> → module-rated supply</text>
+  <text x="1114" y="973" class="tiny"><tspan font-weight="800" fill="#aebdd0">8 BL</tspan> → always on  •  <tspan font-weight="800" fill="#aebdd0">9 SDA-0 / SDO</tspan> → NC  •  logic remains 3.3 V</text>
 
   <g filter="url(#shadow)">
-    <rect class="card" x="1080" y="560" width="472" height="172" rx="24"/>
-    <rect x="1545" y="560" width="7" height="172" rx="3.5" fill="#8fdf65"/>
+    <rect class="card" x="1080" y="436" width="472" height="172" rx="24"/>
+    <rect x="1545" y="436" width="7" height="172" rx="3.5" fill="#8fdf65"/>
   </g>
-  <circle cx="1118" cy="601" r="15" fill="#263f25" stroke="#8fdf65"/>
-  <path d="M1118 592v18M1112 604l6 6 6-6" fill="none" stroke="#d0ffb7" stroke-width="2" stroke-linecap="round"/>
-  <text x="1144" y="609" class="card-title">Expression pedal • J3</text>
-  <text x="1114" y="650" class="body mono"><tspan fill="#b6f597" font-weight="800">TIP</tspan><tspan dx="22">→ protection + RC → GP26 / ADC0</tspan></text>
-  <text x="1114" y="681" class="small"><tspan font-weight="800">RING</tspan> → protected 3V3  •  <tspan font-weight="800">SLEEVE</tspan> → GND</text>
-  <text x="1114" y="711" class="tiny">GP26 is physical pin 31 • voltage-divider pedals only.</text>
+  <circle cx="1118" cy="477" r="15" fill="#263f25" stroke="#8fdf65"/>
+  <path d="M1118 468v18M1112 480l6 6 6-6" fill="none" stroke="#d0ffb7" stroke-width="2" stroke-linecap="round"/>
+  <text x="1144" y="485" class="card-title">Expression pedal • J3</text>
+  <text x="1114" y="526" class="body mono"><tspan fill="#b6f597" font-weight="800">TIP</tspan><tspan dx="22">→ protection + RC → GP26 / ADC0</tspan></text>
+  <text x="1114" y="557" class="small"><tspan font-weight="800">RING</tspan> → protected 3V3  •  <tspan font-weight="800">SLEEVE</tspan> → GND</text>
+  <text x="1114" y="587" class="tiny">GP26 is physical pin 31 • voltage-divider pedals only.</text>
 
   <g filter="url(#shadow)">
-    <rect class="card" x="1080" y="760" width="472" height="224" rx="24"/>
-    <rect x="1545" y="760" width="7" height="224" rx="3.5" fill="#f6c453"/>
+    <rect class="card" x="1080" y="180" width="472" height="224" rx="24"/>
+    <rect x="1545" y="180" width="7" height="224" rx="3.5" fill="#f6c453"/>
   </g>
-  <circle cx="1118" cy="801" r="15" fill="#4a3c1d" stroke="#f6c453"/>
-  <path d="M1118 791v10l-6 6h12l-6 7" fill="none" stroke="#ffe39a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="1144" y="809" class="card-title">Power + native USB</text>
-  <text x="1114" y="850" class="small mono"><tspan fill="#ffe18a" font-weight="800">USB</tspan><tspan dx="22">VBUS pin 40 • native data; no GPIO</tspan></text>
-  <text x="1114" y="889" class="small mono"><tspan fill="#ffe18a" font-weight="800">9 V</tspan><tspan dx="28">protection + 5 V buck → VSYS pin 39</tspan></text>
-  <text x="1114" y="928" class="small mono"><tspan fill="#ffe18a" font-weight="800">3V3</tspan><tspan dx="17">regulated output → physical pin 36</tspan></text>
-  <text x="1114" y="958" class="tiny">USB provides CDC configuration + class-compliant USB-MIDI.</text>
+  <circle cx="1118" cy="221" r="15" fill="#4a3c1d" stroke="#f6c453"/>
+  <path d="M1118 211v10l-6 6h12l-6 7" fill="none" stroke="#ffe39a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="1144" y="229" class="card-title">Power + native USB</text>
+  <text x="1114" y="270" class="small mono"><tspan fill="#ffe18a" font-weight="800">USB</tspan><tspan dx="22">VBUS pin 40 • native data; no GPIO</tspan></text>
+  <text x="1114" y="309" class="small mono"><tspan fill="#ffe18a" font-weight="800">9 V</tspan><tspan dx="28">protection + 5 V buck → VSYS pin 39</tspan></text>
+  <text x="1114" y="348" class="small mono"><tspan fill="#ffe18a" font-weight="800">3V3</tspan><tspan dx="17">regulated output → physical pin 36</tspan></text>
+  <text x="1114" y="378" class="tiny">USB provides CDC configuration + class-compliant USB-MIDI.</text>
 
   <!-- Wiring lines behind the board -->
   <g opacity="0.9">
@@ -139,15 +139,15 @@
     <path class="wire" stroke="#ff9d57" d="M520 744H550L578 667H600"/>
     <path class="wire" stroke="#ff9d57" d="M520 800H558L584 701H600"/>
 
-    <path class="wire" stroke="#5ee3b2" d="M1000 667H1032L1060 301H1080"/>
-    <path class="wire" stroke="#5ee3b2" d="M1000 701H1038L1064 340H1080"/>
-    <path class="wire" stroke="#5ee3b2" d="M1000 735H1044L1068 379H1080"/>
-    <path class="wire" stroke="#5ee3b2" d="M1000 769H1050L1072 418H1080"/>
-    <path class="wire" stroke="#5ee3b2" d="M1000 837H1056L1076 457H1080"/>
-    <path class="wire" stroke="#8fdf65" d="M1000 531H1040L1062 650H1080"/>
-    <path class="wire" stroke="#f6c453" d="M1000 225H1040L1062 850H1080"/>
-    <path class="wire" stroke="#f6c453" d="M1000 259H1048L1068 889H1080"/>
-    <path class="wire" stroke="#f6c453" d="M1000 361H1056L1074 928H1080"/>
+    <path class="wire" stroke="#f6c453" d="M1000 225H1034L1062 270H1080"/>
+    <path class="wire" stroke="#f6c453" d="M1000 259H1040L1066 309H1080"/>
+    <path class="wire" stroke="#f6c453" d="M1000 361H1048L1070 348H1080"/>
+    <path class="wire" stroke="#8fdf65" d="M1000 531H1042L1064 526H1080"/>
+    <path class="wire" stroke="#5ee3b2" d="M1000 667H1032L1060 757H1080"/>
+    <path class="wire" stroke="#5ee3b2" d="M1000 701H1038L1064 796H1080"/>
+    <path class="wire" stroke="#5ee3b2" d="M1000 735H1044L1068 835H1080"/>
+    <path class="wire" stroke="#5ee3b2" d="M1000 769H1050L1072 874H1080"/>
+    <path class="wire" stroke="#5ee3b2" d="M1000 837H1056L1076 913H1080"/>
   </g>
 
   <!-- Pico board -->
