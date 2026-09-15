@@ -73,6 +73,18 @@ bool has_color_in(const FakeTarget& target, midi::display::Rect area, std::uint1
   return false;
 }
 
+std::uint16_t pixel_at(const FakeTarget& target, std::uint16_t x, std::uint16_t y) {
+  for (const auto& transfer : target.transfers) {
+    if (x >= transfer.rect.x && x < transfer.rect.x + transfer.rect.width &&
+        y >= transfer.rect.y && y < transfer.rect.y + transfer.rect.height) {
+      const auto column = static_cast<std::size_t>(x - transfer.rect.x);
+      const auto row = static_cast<std::size_t>(y - transfer.rect.y);
+      return transfer.pixels[row * transfer.rect.width + column];
+    }
+  }
+  return 0;
+}
+
 std::vector<std::uint8_t> rasterize(const std::vector<FakeTarget::Transfer>& transfers) {
   std::vector<std::uint16_t> screen(static_cast<std::size_t>(midi::display::ScreenWidth) *
                                         midi::display::ScreenHeight,
@@ -117,6 +129,21 @@ TEST(LiveRenderer, UsesApprovedLandscapeGeometryAndDirtyRegions) {
   for (const auto& transfer : target.transfers) {
     EXPECT_EQ(transfer.pixels.size(),
               static_cast<std::size_t>(transfer.rect.width) * transfer.rect.height);
+  }
+}
+
+TEST(LiveRenderer, DrawsOnlyTheOuterBorderOfEachRegion) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  renderer.render(base_view());
+
+  constexpr std::uint16_t interior_x = 200;
+  const auto top = midi::display::HeaderHeight;
+  const auto bottom = static_cast<std::uint16_t>(top + midi::display::QuadrantHeight - 1);
+  EXPECT_EQ(pixel_at(target, interior_x, top), midi::display::ColorAccent);
+  EXPECT_EQ(pixel_at(target, interior_x, bottom), midi::display::ColorAccent);
+  for (auto y = static_cast<std::uint16_t>(top + 1); y < bottom; ++y) {
+    EXPECT_EQ(pixel_at(target, interior_x, y), midi::display::ColorBackground) << "y=" << y;
   }
 }
 

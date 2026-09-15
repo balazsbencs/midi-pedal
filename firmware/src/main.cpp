@@ -21,12 +21,12 @@
 #include "usb/pico_usb.hpp"
 #include "usb/protocol_dispatcher.hpp"
 
-namespace {
 extern "C" {
 extern const std::uint8_t _binary_firmware_defaults_factory_empty_bin_start[];
 extern const std::uint8_t _binary_firmware_defaults_factory_empty_bin_end[];
 }
 
+namespace {
 class PicoPorts final : public midi::ControllerPorts {
  public:
   PicoPorts() { relays_.initialize(); }

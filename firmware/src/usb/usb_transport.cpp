@@ -4,7 +4,8 @@ namespace midi::usb {
 
 std::array<std::uint8_t, 4> UsbTransport::midi_packet(MidiMessage message) {
   std::uint8_t cin = message.length == 2 ? 0x0c : 0x0b;
-  return {cin, message.bytes[0], message.bytes[1], message.length > 2 ? message.bytes[2] : 0};
+  return {cin, message.bytes[0], message.bytes[1],
+          static_cast<std::uint8_t>(message.length > 2 ? message.bytes[2] : 0)};
 }
 
 bool UsbTransport::send_frame(std::span<const std::byte> frame) {

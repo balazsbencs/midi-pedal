@@ -18,11 +18,15 @@ void fill(std::span<std::uint16_t> pixels, std::uint16_t color) {
 }
 
 void draw_border(std::span<std::uint16_t> pixels, std::uint16_t width,
-                 std::uint16_t height, std::uint16_t color) {
+                 std::uint16_t height, std::uint16_t y_offset,
+                 std::uint16_t total_height, std::uint16_t color) {
   if (width == 0 || height == 0) return;
-  for (std::uint16_t x = 0; x < width; ++x) {
-    pixels[x] = color;
-    pixels[static_cast<std::size_t>(height - 1) * width + x] = color;
+  if (y_offset == 0) {
+    std::fill_n(pixels.begin(), width, color);
+  }
+  if (static_cast<unsigned>(y_offset) + height == total_height) {
+    std::fill_n(pixels.begin() + static_cast<std::size_t>(height - 1) * width,
+                width, color);
   }
   for (std::uint16_t y = 0; y < height; ++y) {
     pixels[static_cast<std::size_t>(y) * width] = color;
@@ -151,7 +155,7 @@ void LiveRenderer::render_rect(Rect rect, Region region, const LiveView& view,
     const auto pixel_count = static_cast<std::size_t>(rect.width) * rows;
     const auto pixels = std::span<std::uint16_t>(pixels_.data(), pixel_count);
     fill(pixels, ColorBackground);
-    draw_border(pixels, rect.width, rows, border);
+    draw_border(pixels, rect.width, rows, y_offset, rect.height, border);
     const auto origin_y = static_cast<std::int32_t>(rect.y + y_offset);
 
     if (region == Region::Header) {

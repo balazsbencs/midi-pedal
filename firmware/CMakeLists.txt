@@ -124,6 +124,30 @@ if(MIDI_PEDAL_BUILD_FIRMWARE)
   pico_enable_stdio_usb(midi_pedal 0)
   pico_enable_stdio_uart(midi_pedal 0)
   pico_add_extra_outputs(midi_pedal)
+
+  add_executable(display_test
+    src/display_test_main.cpp
+    src/display/font_ascii.cpp
+  )
+  target_link_libraries(display_test PRIVATE pico_stdlib hardware_gpio hardware_spi)
+  target_include_directories(display_test PRIVATE src)
+  pico_enable_stdio_usb(display_test 0)
+  pico_enable_stdio_uart(display_test 0)
+  pico_add_extra_outputs(display_test)
+
+  add_executable(display_renderer_test
+    src/display_renderer_test_main.cpp
+    src/display/st7796s.cpp
+    src/display/live_renderer.cpp
+    src/display/font_ascii.cpp
+  )
+  target_link_libraries(display_renderer_test PRIVATE pico_stdlib hardware_gpio hardware_spi)
+  target_include_directories(display_renderer_test PRIVATE src)
+  target_compile_definitions(display_renderer_test PRIVATE PICO_ON_DEVICE=1)
+  pico_enable_stdio_usb(display_renderer_test 0)
+  pico_enable_stdio_uart(display_renderer_test 0)
+  pico_add_extra_outputs(display_renderer_test)
+
 endif()
 
 if(NOT MIDI_PEDAL_BUILD_FIRMWARE)
