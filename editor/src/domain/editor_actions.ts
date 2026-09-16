@@ -23,7 +23,7 @@ export type EditorAction =
   | { type: "document.imported"; document: ConfigDocumentV1 }
   | { type: "sync.started"; stage: "begin" | "write" | "verify" | "activate" | "readback"; completed?: number; total?: number }
   | { type: "sync.succeeded"; metadata: Omit<DeviceMetadata, "connected">; message?: string }
-  | { type: "sync.failed"; message: string; previousConfigurationIntact: boolean }
+  | { type: "sync.failed"; message: string; previousConfigurationIntact: boolean; deviceDisconnected?: boolean }
   | { type: "draft.resetToDevice"; document: ConfigDocumentV1 };
 
 export type { Destination };

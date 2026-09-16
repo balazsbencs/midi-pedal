@@ -15,14 +15,18 @@ interface AppHeaderProps {
 export function AppHeader({ state, theme, onThemeChange, onConnect, onExport, onImport, onSync }: AppHeaderProps) {
   return (
     <header className="app-header">
-      <div className="brand-lockup"><span className="brand-mark" aria-hidden="true">MP</span><div><p className="eyebrow">MIDI PEDAL</p><h1>Editor <span className="version-chip">v1</span></h1></div></div>
+      <div className="workspace-title">
+        <p className="eyebrow">CONFIGURATION WORKSPACE</p>
+        <div className="title-line"><h1>Editor</h1><span className="version-chip">v1</span></div>
+        <p className="header-subtitle">Build, review, and sync your live set.</p>
+      </div>
       <div className="header-actions">
         <span className={`connection-pill ${state.device.connected ? "is-connected" : ""}`} aria-live="polite"><span className="status-dot" aria-hidden="true" />{state.device.connected ? "Connected" : "Offline"}</span>
         <ThemeSwitch theme={theme} onChange={onThemeChange} />
-        <button type="button" onClick={onExport}>Export JSON</button>
-        <button type="button" onClick={onImport}>Import JSON</button>
-        <button type="button" className="primary-button" disabled={!state.device.connected || state.validationErrors.length > 0 || !state.dirty} onClick={onSync}>Sync to pedal</button>
-        {!state.device.connected && <button type="button" className="connect-button" onClick={onConnect}>Connect pedal</button>}
+        <button type="button" aria-label="Export JSON" onClick={onExport}><span aria-hidden="true">↓</span> Export JSON</button>
+        <button type="button" aria-label="Import JSON" onClick={onImport}><span aria-hidden="true">↑</span> Import JSON</button>
+        <button type="button" className="primary-button" disabled={!state.device.connected || state.validationErrors.length > 0 || !state.dirty} onClick={onSync}><span aria-hidden="true">↻</span> Sync to pedal</button>
+        {!state.device.connected && <button type="button" className="connect-button" onClick={onConnect}><span aria-hidden="true">⌁</span> Connect pedal</button>}
       </div>
     </header>
   );

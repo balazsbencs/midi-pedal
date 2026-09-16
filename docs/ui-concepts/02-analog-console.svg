@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <!-- Concept 02: Analog Console. Inspired by rack labels and VU meters without simulated texture. -->
+  <rect width="480" height="320" fill="#12110F"/>
+  <rect x="0" y="0" width="480" height="38" fill="#E7D8B3"/>
+  <text x="14" y="25" fill="#252018" font-family="DIN Alternate, sans-serif" font-size="17" font-weight="700">MIDNIGHT SET</text>
+  <text x="298" y="25" fill="#6B5C43" font-family="DIN Alternate, sans-serif" font-size="12" font-weight="700">B07  /  P02</text>
+  <rect x="422" y="11" width="44" height="16" rx="8" fill="#2B7C63"/>
+  <text x="444" y="23" text-anchor="middle" fill="#F4F0E6" font-family="Avenir Next, sans-serif" font-size="8" font-weight="700">USB</text>
+
+  <g font-family="DIN Condensed, sans-serif">
+    <path d="M8 46H123V268H8Z" fill="#1E1B17" stroke="#4E4537"/>
+    <rect x="8" y="46" width="115" height="7" fill="#2ED3C6"/>
+    <text x="20" y="96" fill="#E7D8B3" font-size="52" font-weight="700">A</text>
+    <text x="20" y="144" fill="#F6F0E3" font-size="25" font-weight="700">CLEAN</text>
+    <text x="20" y="169" fill="#94866C" font-size="12" font-weight="700" letter-spacing="1">STATE I</text>
+    <circle cx="65" cy="224" r="18" fill="#0F0E0C" stroke="#6D6352" stroke-width="2"/>
+    <circle cx="65" cy="224" r="6" fill="#2ED3C6"/>
+
+    <path d="M131 46H246V268H131Z" fill="#D84A40"/>
+    <rect x="131" y="46" width="115" height="7" fill="#FFCF54"/>
+    <text x="143" y="96" fill="#4A100D" font-size="52" font-weight="700">B</text>
+    <text x="143" y="144" fill="#1C0807" font-size="25" font-weight="700">DRIVE</text>
+    <text x="143" y="169" fill="#681914" font-size="12" font-weight="700" letter-spacing="1">STATE II · ON</text>
+    <circle cx="188" cy="224" r="18" fill="#300D0A" stroke="#F7B148" stroke-width="2"/>
+    <circle cx="188" cy="224" r="7" fill="#FFCF54"/>
+
+    <path d="M254 46H369V268H254Z" fill="#1E1B17" stroke="#4E4537"/>
+    <rect x="254" y="46" width="115" height="7" fill="#9E7AE8"/>
+    <text x="266" y="96" fill="#E7D8B3" font-size="52" font-weight="700">C</text>
+    <text x="266" y="144" fill="#F6F0E3" font-size="25" font-weight="700">CHORUS</text>
+    <text x="266" y="169" fill="#94866C" font-size="12" font-weight="700" letter-spacing="1">STATE I</text>
+    <circle cx="311" cy="224" r="18" fill="#0F0E0C" stroke="#6D6352" stroke-width="2"/>
+    <circle cx="311" cy="224" r="6" fill="#9E7AE8"/>
+
+    <path d="M377 46H472V268H377Z" fill="#1E1B17" stroke="#4E4537"/>
+    <rect x="377" y="46" width="95" height="7" fill="#EBB93E"/>
+    <text x="389" y="96" fill="#E7D8B3" font-size="52" font-weight="700">D</text>
+    <text x="389" y="144" fill="#F6F0E3" font-size="25" font-weight="700">DELAY</text>
+    <text x="389" y="169" fill="#94866C" font-size="12" font-weight="700" letter-spacing="1">STATE I</text>
+    <circle cx="424" cy="224" r="18" fill="#0F0E0C" stroke="#6D6352" stroke-width="2"/>
+    <circle cx="424" cy="224" r="6" fill="#EBB93E"/>
+  </g>
+
+  <rect x="8" y="278" width="464" height="32" fill="#25211B" stroke="#4E4537"/>
+  <text x="20" y="299" fill="#D7C8A3" font-family="DIN Alternate, sans-serif" font-size="11" font-weight="700">VOLUME</text>
+  <g fill="#5B5142"><rect x="98" y="288" width="20" height="12"/><rect x="122" y="288" width="20" height="12"/><rect x="146" y="288" width="20" height="12"/><rect x="170" y="288" width="20" height="12"/><rect x="194" y="288" width="20" height="12"/><rect x="218" y="288" width="20" height="12"/><rect x="242" y="288" width="20" height="12"/><rect x="266" y="288" width="20" height="12"/><rect x="290" y="288" width="20" height="12"/><rect x="314" y="288" width="20" height="12"/><rect x="338" y="288" width="20" height="12"/></g>
+  <g fill="#E9AE35"><rect x="98" y="288" width="20" height="12"/><rect x="122" y="288" width="20" height="12"/><rect x="146" y="288" width="20" height="12"/><rect x="170" y="288" width="20" height="12"/><rect x="194" y="288" width="20" height="12"/><rect x="218" y="288" width="20" height="12"/><rect x="242" y="288" width="20" height="12"/><rect x="266" y="288" width="20" height="12"/></g>
+  <text x="456" y="301" text-anchor="end" fill="#F4F0E6" font-family="DIN Condensed, sans-serif" font-size="20" font-weight="700">96</text>
+</svg>

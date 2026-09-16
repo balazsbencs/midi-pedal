@@ -1,6 +1,6 @@
 import { TransportError, type DeviceTransport } from "./DeviceTransport";
 
-interface SerialReader { read(): Promise<{ value?: Uint8Array; done: boolean }>; releaseLock(): void; }
+interface SerialReader { read(): Promise<{ value?: Uint8Array; done: boolean }>; cancel(): Promise<void>; releaseLock(): void; }
 interface SerialWriter { write(bytes: Uint8Array): Promise<void>; releaseLock(): void; }
 interface SerialPortLike { readable?: ReadableStream<Uint8Array>; writable?: WritableStream<Uint8Array>; open(options: { baudRate: number }): Promise<void>; close(): Promise<void>; }
 interface SerialLike { requestPort(): Promise<SerialPortLike>; }
@@ -44,8 +44,15 @@ export class WebSerialTransport implements DeviceTransport {
   }
 
   async close(): Promise<void> {
-    this.reader?.releaseLock(); this.writer?.releaseLock(); this.reader = undefined; this.writer = undefined;
-    await this.port?.close(); this.port = undefined;
+    const reader = this.reader;
+    const writer = this.writer;
+    const port = this.port;
+    this.reader = undefined; this.writer = undefined; this.port = undefined;
+    if (reader) {
+      try { await reader.cancel(); } catch { /* an errored or disconnected stream is already closed */ }
+      reader.releaseLock();
+    }
+    writer?.releaseLock();
+    if (port) await port.close();
   }
 }
-

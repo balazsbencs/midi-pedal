@@ -16,21 +16,33 @@ export function BankList({ banks, selected, onSelect }: BankListProps) {
   }, [banks, query]);
   return (
     <nav className="bank-pane" aria-label="Banks">
-      <div className="section-heading compact">
-        <div><p className="eyebrow">CONFIGURATION</p><h2>Banks</h2></div>
-        <span className="count-badge">{banks.length}</span>
+      <div className="sidebar-brand">
+        <span className="brand-mark" aria-hidden="true"><span>M</span><span>P</span></span>
+        <div><strong>MIDI PEDAL</strong><span>Editor</span></div>
       </div>
-      <label className="search-label" htmlFor="bank-search">Search banks</label>
-      <input id="bank-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or number" />
-      <div className="bank-list" role="list">
-        {visible.map(({ bank, index }) => (
-          <button key={bank.id} type="button" role="listitem" className={`bank-row ${selected === index ? "is-selected" : ""}`} aria-current={selected === index ? "true" : undefined} onClick={() => onSelect(index)}>
-            <span>{String(index + 1).padStart(3, "0")}</span><strong>{bank.name}</strong>
-          </button>
-        ))}
-        {visible.length === 0 && <p className="muted-copy">No banks match that search.</p>}
+      <div className="sidebar-content">
+        <div className="section-heading compact">
+          <div><p className="eyebrow">CONFIGURATION</p><h2>Banks</h2></div>
+          <span className="count-badge">{banks.length}</span>
+        </div>
+        <label className="search-label" htmlFor="bank-search">Search banks</label>
+        <input id="bank-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Name or number" />
+        <ul className="bank-list">
+          {visible.map(({ bank, index }) => (
+            <li key={bank.id}>
+              <button type="button" className={`bank-row ${selected === index ? "is-selected" : ""}`} aria-current={selected === index ? "true" : undefined} onClick={() => onSelect(index)}>
+                <span>{String(index + 1).padStart(3, "0")}</span><strong>{bank.name}</strong><i aria-hidden="true">›</i>
+              </button>
+            </li>
+          ))}
+          {visible.length === 0 && <li><p className="muted-copy">No banks match that search.</p></li>}
+        </ul>
+        <aside className="sidebar-note" aria-label="Live map reminder">
+          <p className="eyebrow">LIVE MAP</p>
+          <strong>Four switches. One clear view.</strong>
+          <p>A–D always match the physical pedal layout.</p>
+        </aside>
       </div>
     </nav>
   );
 }
-

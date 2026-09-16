@@ -36,6 +36,8 @@ describe("pedal workspace", () => {
     screen.getByRole("tab", { name: "Page 2" }).focus();
     await userEvent.keyboard("{Enter}");
     expect(onPageSelect).toHaveBeenCalledWith(1);
+    await userEvent.keyboard("{ArrowRight}");
+    expect(onPageSelect).toHaveBeenCalledWith(2);
     screen.getByRole("button", { name: /Preset B/ }).focus();
     await userEvent.keyboard("{Enter}");
     expect(onPresetSelect).toHaveBeenCalledWith(1);

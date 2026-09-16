@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-15T21:30:00Z",
+  "title": "Design System: MIDI Pedal — Chromatic Deck",
+  "extensions": {
+    "colorMeta": {
+      "stage-black": {"role": "neutral", "displayName": "Stage Black", "canonical": "#071013", "tonalRamp": ["#020506", "#071013", "#14242A", "#34454B", "#5B6C72", "#89999E", "#BCC8CB", "#EEF3F4"]},
+      "signal-cyan": {"role": "primary", "displayName": "Signal Cyan", "canonical": "#2BE5D2", "tonalRamp": ["#052D29", "#09564E", "#0D8074", "#14AA9B", "#2BE5D2", "#72EEE2", "#AEF6EF", "#E9FDFC"]},
+      "hot-coral": {"role": "secondary", "displayName": "Hot Coral", "canonical": "#F25F5C", "tonalRamp": ["#35100F", "#681D1C", "#982B29", "#C83E3B", "#F25F5C", "#F58D8B", "#F9B9B8", "#FDE9E8"]}
+    },
+    "typographyMeta": {
+      "display": {"displayName": "Preset Display", "purpose": "Large switch letters and preset names."},
+      "status": {"displayName": "Stage Status", "purpose": "Bank, page, state, expression, USB, and diagnostics."}
+    },
+    "shadows": [],
+    "motion": [],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Inactive Preset Tile",
+      "kind": "custom",
+      "refersTo": "preset-inactive",
+      "description": "A fixed switch region with a narrow identity rail and large preset name.",
+      "html": "<div class=\"ds-preset\"><strong>A</strong><span>CLEAN</span><small>POSITION 1</small></div>",
+      "css": ".ds-preset { width: 228px; height: 105px; padding: 16px; border-radius: 10px; background: #102229; color: #F2FAFB; border-left: 6px solid #2BE5D2; font-family: 'Barlow Condensed', sans-serif; display: grid; grid-template-columns: 42px 1fr; align-items: start; } .ds-preset strong { color: #2BE5D2; font-size: 38px; } .ds-preset span { font-size: 30px; font-weight: 700; } .ds-preset small { grid-column: 2; color: #6F8289; font-family: 'Atkinson Hyperlegible', sans-serif; }"
+    },
+    {
+      "name": "Active Preset Tile",
+      "kind": "custom",
+      "refersTo": "preset-active",
+      "description": "A full preset-color state field with explicit ON wording.",
+      "html": "<div class=\"ds-preset-active\"><strong>B</strong><span>DRIVE</span><small>POSITION 2 · ON</small></div>",
+      "css": ".ds-preset-active { width: 228px; height: 105px; padding: 16px; border-radius: 10px; background: #F25F5C; color: #071013; font-family: 'Barlow Condensed', sans-serif; display: grid; grid-template-columns: 42px 1fr; align-items: start; } .ds-preset-active strong { font-size: 38px; } .ds-preset-active span { font-size: 30px; font-weight: 700; } .ds-preset-active small { grid-column: 2; font-family: 'Atkinson Hyperlegible', sans-serif; font-weight: 700; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Chromatic Deck",
+    "overview": "The display behaves like a compact stage instrument. Four stable performance surfaces mirror the physical switches while preset color creates a memorable stage map.",
+    "keyCharacteristics": ["Saturated functional color fields", "Stable 2×2 A–D mapping", "Condensed display typography", "Flat tonal layering"],
+    "rules": [
+      {"name": "Full-Field State", "body": "Position 2 fills the complete tile and adds explicit state text.", "section": "colors"},
+      {"name": "Distance Test", "body": "Switch letter, preset name, and active state read before secondary details.", "section": "typography"}
+    ],
+    "dos": ["Keep A–D anchored to physical positions.", "Use fill and wording together for active state."],
+    "donts": ["Do not add decorative effects.", "Do not make MIDI handling wait on display effects."]
+  }
+}

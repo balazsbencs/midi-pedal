@@ -54,9 +54,9 @@ midi::LiveView view_for(std::string_view name) {
   } else if (name == "toggle-position-2") {
     view.bankName = ascii<20>("STAGE");
     view.selectedPositions = {{{ascii<12>("LEAD"), midi::display::ColorAccent},
-                              {ascii<12>("RHY"), midi::display::ColorSuccess},
-                              {ascii<12>("FX"), midi::display::ColorWarning},
-                              {ascii<12>("TAP"), midi::display::ColorForeground}}};
+                              {ascii<12>("RHY"), midi::display::ColorError},
+                              {ascii<12>("FX"), 0xCCDF},
+                              {ascii<12>("TAP"), midi::display::ColorWarning}}};
     view.expressionLabel = ascii<12>("VOL");
     view.positions = {2, 2, 2, 2};
     view.expressionValue = 96;

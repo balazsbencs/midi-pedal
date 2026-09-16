@@ -157,6 +157,23 @@ bool ImageReader::load_bank(std::uint8_t bankIndex, BankConfig& output) const {
 std::span<const std::byte> ImageReader::bank_record(std::uint8_t bankIndex) const {
   const auto inspection = inspect();
   if (inspection.error != ImageError::None || bankIndex >= inspection.bankCount) return {};
+  return bank_record_unchecked(bankIndex, inspection.bankCount);
+}
+
+bool ImageReader::validate_all_banks() const {
+  const auto inspection = inspect();
+  if (inspection.error != ImageError::None) return false;
+  for (std::uint16_t index = 0; index < inspection.bankCount; ++index) {
+    BankConfig bank{};
+    const auto record = bank_record_unchecked(static_cast<std::uint8_t>(index), inspection.bankCount);
+    if (record.empty() || !read_bank_record(record, bank)) return false;
+  }
+  return true;
+}
+
+std::span<const std::byte> ImageReader::bank_record_unchecked(std::uint8_t bankIndex,
+                                                              std::uint16_t bankCount) const {
+  if (bankIndex >= bankCount) return {};
   const auto relativeOffset = get_u32(bytes_, kHeaderSize + static_cast<std::size_t>(bankIndex) * 4);
   if (relativeOffset == kEmptyOffset || relativeOffset >= bytes_.size() - kPayloadOffset) return {};
   const auto recordStart = kPayloadOffset + relativeOffset;

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <!-- Concept 05: Gig Poster. Borderless color fields and oversized typography maximize personality. -->
+  <rect width="480" height="320" fill="#111111"/>
+  <rect x="0" y="0" width="174" height="38" fill="#F4EDE0"/>
+  <text x="12" y="26" fill="#171717" font-family="DIN Condensed, sans-serif" font-size="21" font-weight="700">MIDNIGHT SET</text>
+  <rect x="174" y="0" width="166" height="38" fill="#111111"/>
+  <text x="187" y="25" fill="#F4EDE0" font-family="Avenir Next, sans-serif" font-size="10" font-weight="700" letter-spacing="1">BANK 07 / PAGE 2</text>
+  <rect x="340" y="0" width="140" height="38" fill="#19CDBA"/>
+  <text x="468" y="25" text-anchor="end" fill="#06231F" font-family="Avenir Next, sans-serif" font-size="10" font-weight="700">USB CONNECTED</text>
+
+  <g font-family="DIN Condensed, sans-serif" font-weight="700">
+    <rect x="0" y="38" width="240" height="113" fill="#2156F4"/>
+    <text x="14" y="89" fill="#BFD0FF" font-size="60">A</text>
+    <text x="82" y="103" fill="#FFFFFF" font-size="42">CLEAN</text>
+    <text x="84" y="130" fill="#BFD0FF" font-family="Avenir Next, sans-serif" font-size="10" letter-spacing="1.5">POSITION 1</text>
+
+    <rect x="240" y="38" width="240" height="113" fill="#FF4E37"/>
+    <text x="254" y="89" fill="#671309" font-size="60">B</text>
+    <text x="322" y="103" fill="#1C0603" font-size="42">DRIVE</text>
+    <text x="324" y="130" fill="#671309" font-family="Avenir Next, sans-serif" font-size="10" letter-spacing="1.5">POSITION 2 · ON</text>
+
+    <rect x="0" y="151" width="240" height="113" fill="#A3F25D"/>
+    <text x="14" y="202" fill="#28450D" font-size="60">C</text>
+    <text x="78" y="216" fill="#101A08" font-size="34">CHORUS</text>
+    <text x="80" y="243" fill="#385E16" font-family="Avenir Next, sans-serif" font-size="10" letter-spacing="1.5">POSITION 1</text>
+
+    <rect x="240" y="151" width="240" height="113" fill="#F1BDEB"/>
+    <text x="254" y="202" fill="#57204F" font-size="60">D</text>
+    <text x="322" y="216" fill="#260921" font-size="42">DELAY</text>
+    <text x="324" y="243" fill="#57204F" font-family="Avenir Next, sans-serif" font-size="10" letter-spacing="1.5">POSITION 1</text>
+  </g>
+
+  <rect x="0" y="264" width="480" height="56" fill="#111111"/>
+  <text x="14" y="299" fill="#F4EDE0" font-family="DIN Condensed, sans-serif" font-size="25" font-weight="700">VOLUME</text>
+  <rect x="116" y="281" width="280" height="16" fill="#313131"/>
+  <rect x="116" y="281" width="212" height="16" fill="#19CDBA"/>
+  <text x="465" y="302" text-anchor="end" fill="#F4EDE0" font-family="DIN Condensed, sans-serif" font-size="32" font-weight="700">96</text>
+</svg>

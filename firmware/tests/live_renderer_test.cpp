@@ -115,14 +115,23 @@ TEST(LiveRenderer, UsesApprovedLandscapeGeometryAndDirtyRegions) {
 
   ASSERT_FALSE(target.transfers.empty());
   EXPECT_TRUE(has_rect_in(target, 0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight));
-  EXPECT_TRUE(has_rect_in(target, 0, midi::display::HeaderHeight, midi::display::QuadrantWidth,
+  EXPECT_TRUE(has_rect_in(target, midi::display::DeckInset, midi::display::DeckTop,
+                         midi::display::QuadrantWidth,
                          midi::display::QuadrantHeight));
-  EXPECT_TRUE(has_rect_in(target, midi::display::QuadrantWidth, midi::display::HeaderHeight,
+  EXPECT_TRUE(has_rect_in(target,
+                         midi::display::DeckInset + midi::display::QuadrantWidth +
+                             midi::display::DeckGap,
+                         midi::display::DeckTop,
                          midi::display::QuadrantWidth, midi::display::QuadrantHeight));
-  EXPECT_TRUE(has_rect_in(target, 0, midi::display::HeaderHeight + midi::display::QuadrantHeight,
+  EXPECT_TRUE(has_rect_in(target, midi::display::DeckInset,
+                         midi::display::DeckTop + midi::display::QuadrantHeight +
+                             midi::display::DeckGap,
                          midi::display::QuadrantWidth, midi::display::QuadrantHeight));
-  EXPECT_TRUE(has_rect_in(target, midi::display::QuadrantWidth,
-                         midi::display::HeaderHeight + midi::display::QuadrantHeight,
+  EXPECT_TRUE(has_rect_in(target,
+                         midi::display::DeckInset + midi::display::QuadrantWidth +
+                             midi::display::DeckGap,
+                         midi::display::DeckTop + midi::display::QuadrantHeight +
+                             midi::display::DeckGap,
                          midi::display::QuadrantWidth, midi::display::QuadrantHeight));
   EXPECT_TRUE(has_rect_in(target, 0, midi::display::FooterY, midi::display::ScreenWidth,
                          midi::display::FooterHeight));
@@ -132,19 +141,19 @@ TEST(LiveRenderer, UsesApprovedLandscapeGeometryAndDirtyRegions) {
   }
 }
 
-TEST(LiveRenderer, DrawsOnlyTheOuterBorderOfEachRegion) {
+TEST(LiveRenderer, DrawsRoundedDeckTilesAndFullFieldActiveState) {
   FakeTarget target;
   midi::display::LiveRenderer renderer(target);
   renderer.render(base_view());
 
-  constexpr std::uint16_t interior_x = 200;
-  const auto top = midi::display::HeaderHeight;
-  const auto bottom = static_cast<std::uint16_t>(top + midi::display::QuadrantHeight - 1);
-  EXPECT_EQ(pixel_at(target, interior_x, top), midi::display::ColorAccent);
-  EXPECT_EQ(pixel_at(target, interior_x, bottom), midi::display::ColorAccent);
-  for (auto y = static_cast<std::uint16_t>(top + 1); y < bottom; ++y) {
-    EXPECT_EQ(pixel_at(target, interior_x, y), midi::display::ColorBackground) << "y=" << y;
-  }
+  const auto a_x = midi::display::DeckInset;
+  const auto b_x = static_cast<std::uint16_t>(
+      a_x + midi::display::QuadrantWidth + midi::display::DeckGap);
+  const auto y = midi::display::DeckTop;
+  EXPECT_EQ(pixel_at(target, a_x, y), midi::display::ColorBackground);
+  EXPECT_EQ(pixel_at(target, a_x, y + 30), midi::display::ColorAccent);
+  EXPECT_EQ(pixel_at(target, a_x + 200, y + 90), midi::display::ColorTile);
+  EXPECT_EQ(pixel_at(target, b_x + 200, y + 90), midi::display::ColorAccent);
 }
 
 TEST(LiveRenderer, DoesNotTransferUnchangedView) {
@@ -185,13 +194,17 @@ TEST(LiveRenderer, RedrawsTheNamedHeaderAndAffectedQuadrantOnly) {
   renderer.render(view);
 
   EXPECT_TRUE(has_rect_in(target, 0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight));
-  EXPECT_TRUE(has_rect_in(target, midi::display::QuadrantWidth, midi::display::HeaderHeight,
+  const auto quadrant_b_x = static_cast<std::uint16_t>(
+      midi::display::DeckInset + midi::display::QuadrantWidth +
+      midi::display::DeckGap);
+  EXPECT_TRUE(has_rect_in(target, quadrant_b_x, midi::display::DeckTop,
                           midi::display::QuadrantWidth, midi::display::QuadrantHeight));
   for (const auto& transfer : target.transfers) {
     const bool header = transfer.rect.y < midi::display::HeaderHeight;
-    const bool quadrant_b = transfer.rect.x == midi::display::QuadrantWidth &&
-                            transfer.rect.y >= midi::display::HeaderHeight &&
-                            transfer.rect.y < midi::display::FooterY;
+    const bool quadrant_b = transfer.rect.x == quadrant_b_x &&
+                            transfer.rect.y >= midi::display::DeckTop &&
+                            transfer.rect.y < midi::display::DeckTop +
+                                                  midi::display::QuadrantHeight;
     EXPECT_TRUE(header || quadrant_b);
   }
 }
@@ -205,11 +218,41 @@ TEST(LiveRenderer, RendersConfiguredSelectedLabelAccentAndWatchdogDiagnostic) {
   view.watchdogReset = true;
   renderer.render(view);
 
-  EXPECT_TRUE(has_color_in(target, {64, static_cast<std::uint16_t>(midi::display::HeaderHeight + 18),
-                                    48, 14},
+  EXPECT_TRUE(has_color_in(target,
+                           {midi::display::DeckInset, midi::display::DeckTop,
+                            midi::display::QuadrantWidth,
+                            midi::display::QuadrantHeight},
                            midi::display::ColorSuccess));
   EXPECT_TRUE(has_color_in(target, {0, 0, midi::display::ScreenWidth, midi::display::HeaderHeight},
                            midi::display::ColorWarning));
+}
+
+TEST(LiveRenderer, ChoosesReadableTextForBrightAndDarkActiveColors) {
+  FakeTarget bright_target;
+  midi::display::LiveRenderer bright_renderer(bright_target);
+  auto bright_view = base_view();
+  bright_view.positions[0] = 2;
+  bright_view.selectedPositions[0].label = ascii<12>("CORAL");
+  bright_view.selectedPositions[0].accentRgb565 = midi::display::ColorError;
+  bright_renderer.render(bright_view);
+  EXPECT_TRUE(has_color_in(
+      bright_target,
+      {static_cast<std::uint16_t>(midi::display::DeckInset + 68),
+       static_cast<std::uint16_t>(midi::display::DeckTop + 15), 120, 40},
+      midi::display::ColorBackground));
+
+  FakeTarget dark_target;
+  midi::display::LiveRenderer dark_renderer(dark_target);
+  auto dark_view = base_view();
+  dark_view.positions[0] = 2;
+  dark_view.selectedPositions[0].label = ascii<12>("NAVY");
+  dark_view.selectedPositions[0].accentRgb565 = 0x0088;
+  dark_renderer.render(dark_view);
+  EXPECT_TRUE(has_color_in(
+      dark_target,
+      {static_cast<std::uint16_t>(midi::display::DeckInset + 68),
+       static_cast<std::uint16_t>(midi::display::DeckTop + 15), 120, 40},
+      midi::display::ColorForeground));
 }
 
 TEST(LiveRenderer, RedrawsFooterWhenExpressionAssignmentLabelChanges) {
@@ -239,10 +282,13 @@ TEST(LiveRenderer, OnlyUpdatesChangedQuadrantAndExpressionFooter) {
   renderer.render(view);
 
   ASSERT_FALSE(target.transfers.empty());
+  const auto quadrant_c_y = static_cast<std::uint16_t>(
+      midi::display::DeckTop + midi::display::QuadrantHeight +
+      midi::display::DeckGap);
   for (const auto& transfer : target.transfers) {
-    const bool quadrant_c = transfer.rect.x == 0 &&
-        transfer.rect.y >= midi::display::HeaderHeight + midi::display::QuadrantHeight &&
-        transfer.rect.y < midi::display::FooterY;
+    const bool quadrant_c = transfer.rect.x == midi::display::DeckInset &&
+        transfer.rect.y >= quadrant_c_y &&
+        transfer.rect.y < quadrant_c_y + midi::display::QuadrantHeight;
     const bool footer = transfer.rect.y >= midi::display::FooterY;
     EXPECT_TRUE(quadrant_c || footer);
   }

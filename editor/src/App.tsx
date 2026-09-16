@@ -17,6 +17,13 @@ import { applyTheme, readInitialTheme, themeStorageKey, type Theme } from "./ui/
 import "./ui/theme/tokens.css";
 import "./ui/workspace.css";
 
+/*
+THESIS: Make the physical A–D pedal map the center of a disciplined studio console, refusing a generic form-first settings page.
+OWN-WORLD: Cool blue-black and white surfaces, crisp one-pixel dividers, compact sans-serif type, and functional preset color.
+STORY: Choose a bank, confirm its page map, edit one preset, then validate and sync without losing context.
+FIRST VIEWPORT: Full-height bank rail at left; command bar above; 2×2 switch map in the broad center; ordered inspector at right; status along the floor.
+FORM: Persistent studio console, the strongest task-fit composition from the approved dashboard reference; staged as a dense desktop editor that collapses cleanly below laptop width.
+*/
 export function App() {
   const [state, dispatch] = useReducer(editorReducer, undefined, makeInitialState);
   const sessionRef = useRef<DeviceSession | null>(null);
@@ -69,8 +76,17 @@ export function App() {
       return;
     }
     const result = await synchronizeDraft(sessionRef.current, state.draft.config, event => dispatch({ type: "sync.started", stage: event.stage.toLowerCase() as "begin" | "write" | "verify" | "activate" | "readback", completed: event.completed, total: event.total }));
-    if (result.ok) dispatch({ type: "sync.succeeded", metadata: result.metadata as { imageCrc32: number; imageSize: number; sequence: number; activeSlot: "A" | "B" }, message: "Configuration synchronized" });
-    else dispatch({ type: "sync.failed", message: `${result.code}: ${result.message}`, previousConfigurationIntact: true });
+    if (result.ok) {
+      dispatch({ type: "sync.succeeded", metadata: result.metadata as { imageCrc32: number; imageSize: number; sequence: number; activeSlot: "A" | "B" }, message: "Configuration synchronized" });
+    } else {
+      const disconnected = result.code === "DISCONNECTED";
+      if (disconnected) {
+        const session = sessionRef.current;
+        sessionRef.current = null;
+        await session?.disconnect().catch(() => undefined);
+      }
+      dispatch({ type: "sync.failed", message: `${result.code}: ${result.message}`, previousConfigurationIntact: true, deviceDisconnected: disconnected });
+    }
   };
   useEffect(() => {
     if (!state.dirty) return;
@@ -82,17 +98,19 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <AppHeader state={state} theme={theme} onThemeChange={changeTheme} onConnect={() => void connect()} onExport={exportDraft} onImport={importDraft} onSync={() => void sync()} />
-      <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void readImport(file); event.target.value = ""; }} />
-      <main className="workspace-grid">
-        <BankList banks={state.draft.config.banks} selected={state.selection.bank} onSelect={index => dispatch({ type: "selection.bankChanged", index })} />
-        <section className="map-pane">
-          <PageMap bank={bank} selectedPage={state.selection.page} selectedPreset={state.selection.preset} onPageSelect={index => dispatch({ type: "selection.pageChanged", index })} onPresetSelect={index => dispatch({ type: "selection.presetChanged", index })} />
-          <ExpressionSummary expression={bank.expression} />
-        </section>
-        <PresetInspector state={state} dispatch={dispatch} />
-      </main>
-      <StatusBar state={state} />
+      <BankList banks={state.draft.config.banks} selected={state.selection.bank} onSelect={index => dispatch({ type: "selection.bankChanged", index })} />
+      <section className="app-stage">
+        <AppHeader state={state} theme={theme} onThemeChange={changeTheme} onConnect={() => void connect()} onExport={exportDraft} onImport={importDraft} onSync={() => void sync()} />
+        <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void readImport(file); event.target.value = ""; }} />
+        <main className="workspace-grid">
+          <section className="map-pane">
+            <PageMap bank={bank} selectedPage={state.selection.page} selectedPreset={state.selection.preset} onPageSelect={index => dispatch({ type: "selection.pageChanged", index })} onPresetSelect={index => dispatch({ type: "selection.presetChanged", index })} />
+            <ExpressionSummary expression={bank.expression} />
+          </section>
+          <PresetInspector state={state} dispatch={dispatch} />
+        </main>
+        <StatusBar state={state} />
+      </section>
     </div>
   );
 }

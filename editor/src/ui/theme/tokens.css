@@ -9,6 +9,7 @@
   --panel-raised: #f8fafc;
   --control: #ffffff;
   --border: #cbd5e1;
+  --control-border: #7b8ba3;
   --text: #172033;
   --muted: #536174;
   --accent: #2454d6;
@@ -17,7 +18,7 @@
   --success: #087443;
   --warning: #8a5200;
   --error: #b42318;
-  --focus: #e08b00;
+  --focus: #995900;
   --shadow: 0 8px 28px rgb(29 47 78 / 0.08);
 }
 
@@ -29,6 +30,7 @@
   --panel-raised: #1d293c;
   --control: #111a29;
   --border: #42516a;
+  --control-border: #70819d;
   --text: #f3f5f9;
   --muted: #b8c2d3;
   --accent: #91adff;
@@ -46,4 +48,3 @@ body { margin: 0; min-width: 320px; background: var(--canvas); color: var(--text
 button, input, select, textarea { font: inherit; }
 button { cursor: pointer; }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-

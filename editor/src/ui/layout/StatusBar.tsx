@@ -6,10 +6,15 @@ export function StatusBar({ state }: { state: EditorState }) {
   const sync = state.dirty ? "Unsynced changes" : state.device.connected ? "Matches pedal" : "Not connected";
   return (
     <footer className="status-bar" aria-live="polite">
-      <span className={state.validationErrors.length ? "status-error" : "status-success"}>{validation}</span>
-      <span>{sync}</span>
-      {state.sync.stage === "error" && <span className="status-error">{state.sync.message}</span>}
-      {state.sync.stage === "success" && <span className="status-success">{state.sync.message}</span>}
+      <div className="status-group">
+        <span className={state.validationErrors.length ? "status-error" : "status-success"}><span className="status-dot" aria-hidden="true" />{validation}</span>
+        <span>{sync}</span>
+        {state.sync.stage === "error" && <span className="status-error">{state.sync.message}</span>}
+        {state.sync.stage === "success" && <span className="status-success">{state.sync.message}</span>}
+      </div>
+      <div className="status-breadcrumb" aria-label="Current selection">
+        <span>Bank {state.selection.bank + 1}</span><b aria-hidden="true">/</b><span>Page {state.selection.page + 1}</span><b aria-hidden="true">/</b><span>Preset {String.fromCharCode(65 + state.selection.preset)}</span>
+      </div>
       <ErrorSummary errors={state.validationErrors} />
     </footer>
   );

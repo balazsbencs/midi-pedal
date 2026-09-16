@@ -99,7 +99,11 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case "sync.succeeded":
       return { ...state, device: { connected: true, ...action.metadata }, dirty: false, sync: { stage: "success", message: action.message ?? "Configuration synchronized" }, validationErrors: [] };
     case "sync.failed":
-      return { ...state, sync: { stage: "error", message: action.message, previousConfigurationIntact: action.previousConfigurationIntact } };
+      return {
+        ...state,
+        device: action.deviceDisconnected ? { ...state.device, connected: false } : state.device,
+        sync: { stage: "error", message: action.message, previousConfigurationIntact: action.previousConfigurationIntact }
+      };
     case "draft.resetToDevice":
       return { ...state, draft: action.document, dirty: false, validationErrors: [] };
   }

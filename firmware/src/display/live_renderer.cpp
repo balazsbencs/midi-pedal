@@ -1,99 +1,251 @@
+/*
+THESIS: Chromatic Deck turns the fixed A–D switch map into four memorable color surfaces; it refuses a generic outlined dashboard.
+OWN-WORLD: Blue-black stage surfaces, saturated preset rails and fills, condensed display type, hyperlegible status type, flat tonal depth.
+STORY: Read the bank, identify each switch assignment, recognize every toggle state, then confirm expression and connection status.
+FIRST VIEWPORT: A 42 px header, two-by-two 228×105 px switch deck, and 44 px expression footer. Position 2 fills its complete tile.
+FORM: User-selected Chromatic Deck, first-ranked stage-grid direction, based on mockup 01; fixed physical mapping is the staging rule.
+*/
 #include "live_renderer.hpp"
 
 #include <algorithm>
 #include <array>
 #include <string_view>
 
-#include "font_ascii.hpp"
+#include "font_deck.hpp"
 
 namespace midi::display {
 namespace {
 
-constexpr std::uint16_t clamp_width(std::uint16_t width) {
-  return width > ScreenWidth ? ScreenWidth : width;
+struct Canvas {
+  std::span<std::uint16_t> pixels;
+  std::uint16_t width{};
+  std::uint16_t rows{};
+  std::uint16_t yOffset{};
+  std::uint16_t totalHeight{};
+};
+
+constexpr char uppercase_ascii(char character) {
+  return character >= 'a' && character <= 'z'
+             ? static_cast<char>(character - ('a' - 'A'))
+             : character;
 }
 
-void fill(std::span<std::uint16_t> pixels, std::uint16_t color) {
-  std::fill(pixels.begin(), pixels.end(), color);
+constexpr std::uint16_t blend565(std::uint16_t background,
+                                 std::uint16_t foreground,
+                                 std::uint8_t alpha) {
+  if (alpha == 0) return background;
+  if (alpha >= 15) return foreground;
+  const auto inverse = static_cast<unsigned>(15 - alpha);
+  const auto red = (((background >> 11) & 0x1FU) * inverse +
+                    ((foreground >> 11) & 0x1FU) * alpha + 7U) /
+                   15U;
+  const auto green = (((background >> 5) & 0x3FU) * inverse +
+                      ((foreground >> 5) & 0x3FU) * alpha + 7U) /
+                     15U;
+  const auto blue = ((background & 0x1FU) * inverse +
+                     (foreground & 0x1FU) * alpha + 7U) /
+                    15U;
+  return static_cast<std::uint16_t>((red << 11) | (green << 5) | blue);
 }
 
-void draw_border(std::span<std::uint16_t> pixels, std::uint16_t width,
-                 std::uint16_t height, std::uint16_t y_offset,
-                 std::uint16_t total_height, std::uint16_t color) {
-  if (width == 0 || height == 0) return;
-  if (y_offset == 0) {
-    std::fill_n(pixels.begin(), width, color);
+void put_pixel(Canvas canvas, std::int32_t x, std::int32_t y,
+               std::uint16_t color, std::uint8_t alpha = 15) {
+  if (x < 0 || y < canvas.yOffset || x >= canvas.width ||
+      y >= static_cast<std::int32_t>(canvas.yOffset + canvas.rows) ||
+      y >= canvas.totalHeight) {
+    return;
   }
-  if (static_cast<unsigned>(y_offset) + height == total_height) {
-    std::fill_n(pixels.begin() + static_cast<std::size_t>(height - 1) * width,
-                width, color);
-  }
-  for (std::uint16_t y = 0; y < height; ++y) {
-    pixels[static_cast<std::size_t>(y) * width] = color;
-    pixels[static_cast<std::size_t>(y) * width + width - 1] = color;
+  auto& pixel = canvas.pixels[static_cast<std::size_t>(y - canvas.yOffset) *
+                                  canvas.width +
+                              static_cast<std::size_t>(x)];
+  pixel = blend565(pixel, color, alpha);
+}
+
+void fill_rect(Canvas canvas, std::int32_t x, std::int32_t y,
+               std::int32_t width, std::int32_t height,
+               std::uint16_t color) {
+  const auto left = std::max<std::int32_t>(0, x);
+  const auto right = std::min<std::int32_t>(canvas.width, x + width);
+  const auto top = std::max<std::int32_t>(canvas.yOffset, y);
+  const auto bottom = std::min<std::int32_t>(canvas.yOffset + canvas.rows,
+                                             y + height);
+  for (auto row = top; row < bottom; ++row) {
+    auto begin = canvas.pixels.begin() +
+                 static_cast<std::size_t>(row - canvas.yOffset) * canvas.width +
+                 left;
+    std::fill(begin, begin + (right - left), color);
   }
 }
 
-void draw_glyph(std::span<std::uint16_t> pixels, std::uint16_t width,
-                std::uint16_t height, std::int32_t x, std::int32_t y,
-                char character, std::uint16_t color, std::uint8_t scale = 2) {
-  const auto glyph = glyph_for(character);
-  for (std::uint16_t row = 0; row < glyph.size(); ++row) {
-    for (std::uint16_t col = 0; col < 5; ++col) {
-      if ((glyph[row] & (1u << (4u - col))) == 0) continue;
-      for (std::uint8_t sy = 0; sy < scale; ++sy) {
-        for (std::uint8_t sx = 0; sx < scale; ++sx) {
-          const auto px = x + static_cast<std::int32_t>(col * scale + sx);
-          const auto py = y + static_cast<std::int32_t>(row * scale + sy);
-          if (px >= 0 && py >= 0 && px < width && py < height) {
-            pixels[static_cast<std::size_t>(py) * width + static_cast<std::size_t>(px)] = color;
-          }
-        }
+bool inside_rounded_rect(std::int32_t x, std::int32_t y,
+                         std::int32_t width, std::int32_t height,
+                         std::int32_t radius) {
+  if (x < 0 || y < 0 || x >= width || y >= height) return false;
+  if ((x >= radius && x < width - radius) ||
+      (y >= radius && y < height - radius)) {
+    return true;
+  }
+  const auto center_x = x < radius ? radius - 1 : width - radius;
+  const auto center_y = y < radius ? radius - 1 : height - radius;
+  const auto dx = x - center_x;
+  const auto dy = y - center_y;
+  return dx * dx + dy * dy <= radius * radius;
+}
+
+void fill_rounded_rect(Canvas canvas, std::uint16_t radius,
+                       std::uint16_t color) {
+  for (std::uint16_t row = 0; row < canvas.rows; ++row) {
+    const auto y = static_cast<std::int32_t>(canvas.yOffset + row);
+    for (std::uint16_t x = 0; x < canvas.width; ++x) {
+      if (inside_rounded_rect(x, y, canvas.width, canvas.totalHeight, radius)) {
+        canvas.pixels[static_cast<std::size_t>(row) * canvas.width + x] = color;
       }
     }
   }
 }
 
-void draw_text(std::span<std::uint16_t> pixels, std::uint16_t width,
-               std::uint16_t height, std::int32_t x, std::int32_t y,
-               std::string_view text, std::uint16_t color,
-               std::uint8_t scale = 2) {
+void fill_rounded_rail(Canvas canvas, std::uint16_t rail_width,
+                       std::uint16_t radius, std::uint16_t color) {
+  for (std::uint16_t row = 0; row < canvas.rows; ++row) {
+    const auto y = static_cast<std::int32_t>(canvas.yOffset + row);
+    for (std::uint16_t x = 0; x < rail_width; ++x) {
+      if (inside_rounded_rect(x, y, canvas.width, canvas.totalHeight, radius)) {
+        canvas.pixels[static_cast<std::size_t>(row) * canvas.width + x] = color;
+      }
+    }
+  }
+}
+
+void draw_glyph(Canvas canvas, std::int32_t x, std::int32_t y,
+                char character, const DeckFont& font,
+                std::uint16_t color) {
+  const auto normalized = uppercase_ascii(character);
+  const auto codepoint = static_cast<unsigned char>(normalized);
+  const auto safe_codepoint =
+      codepoint >= font.firstCharacter && codepoint <= font.lastCharacter
+          ? codepoint
+          : static_cast<unsigned char>('?');
+  const auto& glyph = font.glyphs[safe_codepoint - font.firstCharacter];
+  const auto glyph_x = x + glyph.bearingX;
+  const auto glyph_y = y + glyph.bearingY;
+  for (std::uint16_t row = 0; row < glyph.height; ++row) {
+    for (std::uint16_t column = 0; column < glyph.width; ++column) {
+      const auto pixel_index =
+          static_cast<std::size_t>(row) * glyph.width + column;
+      const auto packed = font.pixels[glyph.offset + pixel_index / 2];
+      const auto alpha = static_cast<std::uint8_t>(
+          (pixel_index & 1U) == 0 ? packed >> 4 : packed & 0x0FU);
+      put_pixel(canvas, glyph_x + column, glyph_y + row, color, alpha);
+    }
+  }
+}
+
+std::int32_t text_width(std::string_view text, const DeckFont& font) {
+  std::int32_t width = 0;
+  for (const auto character : text) {
+    const auto normalized = uppercase_ascii(character);
+    const auto codepoint = static_cast<unsigned char>(normalized);
+    const auto safe_codepoint =
+        codepoint >= font.firstCharacter && codepoint <= font.lastCharacter
+            ? codepoint
+            : static_cast<unsigned char>('?');
+    width += font.glyphs[safe_codepoint - font.firstCharacter].advance;
+  }
+  return width;
+}
+
+std::int32_t draw_text(Canvas canvas, std::int32_t x, std::int32_t y,
+                       std::string_view text, DeckFontRole role,
+                       std::uint16_t color) {
+  const auto& font = deck_font(role);
   auto cursor = x;
-  for (const char character : text) {
-    draw_glyph(pixels, width, height, cursor, y, character, color, scale);
-    cursor += 6 * scale;
-    if (cursor >= width) break;
+  for (const auto character : text) {
+    draw_glyph(canvas, cursor, y, character, font, color);
+    const auto normalized = uppercase_ascii(character);
+    const auto codepoint = static_cast<unsigned char>(normalized);
+    const auto safe_codepoint =
+        codepoint >= font.firstCharacter && codepoint <= font.lastCharacter
+            ? codepoint
+            : static_cast<unsigned char>('?');
+    cursor += font.glyphs[safe_codepoint - font.firstCharacter].advance;
+    if (cursor >= canvas.width) break;
+  }
+  return cursor;
+}
+
+void draw_text_right(Canvas canvas, std::int32_t right, std::int32_t y,
+                     std::string_view text, DeckFontRole role,
+                     std::uint16_t color) {
+  const auto& font = deck_font(role);
+  draw_text(canvas, right - text_width(text, font), y, text, role, color);
+}
+
+void draw_circle(Canvas canvas, std::int32_t center_x, std::int32_t center_y,
+                 std::int32_t radius, std::uint16_t color) {
+  for (auto y = center_y - radius; y <= center_y + radius; ++y) {
+    for (auto x = center_x - radius; x <= center_x + radius; ++x) {
+      const auto dx = x - center_x;
+      const auto dy = y - center_y;
+      if (dx * dx + dy * dy <= radius * radius) {
+        put_pixel(canvas, x, y, color);
+      }
+    }
   }
 }
 
 template <std::size_t Capacity>
-std::string_view bounded_text(const AsciiString<Capacity>& value, std::string_view fallback) {
+std::string_view bounded_text(const AsciiString<Capacity>& value,
+                              std::string_view fallback) {
   const auto length = std::min<std::size_t>(value.length, Capacity);
   return length == 0 ? fallback : std::string_view(value.data.data(), length);
 }
 
 bool same_ascii(const auto& left, const auto& right) {
   if (left.length != right.length) return false;
-  const auto length = std::min(left.data.size(), static_cast<std::size_t>(left.length));
-  return std::equal(left.data.begin(), left.data.begin() + length, right.data.begin());
+  const auto length =
+      std::min(left.data.size(), static_cast<std::size_t>(left.length));
+  return std::equal(left.data.begin(), left.data.begin() + length,
+                    right.data.begin());
 }
 
 bool same_position_view(const PositionView& left, const PositionView& right) {
-  return same_ascii(left.label, right.label) && left.accentRgb565 == right.accentRgb565;
+  return same_ascii(left.label, right.label) &&
+         left.accentRgb565 == right.accentRgb565;
 }
 
-void draw_decimal(std::span<std::uint16_t> pixels, std::uint16_t width, std::uint16_t height,
-                  std::int32_t x, std::int32_t y, std::uint8_t value, std::uint16_t color) {
-  std::array<char, 3> digits{};
-  std::uint8_t count = 0;
+std::string_view decimal_text(std::uint8_t value, std::array<char, 3>& digits,
+                              bool pad_two = false) {
+  auto count = std::uint8_t{0};
   do {
-    digits[2 - count] = static_cast<char>('0' + value % 10u);
-    value = static_cast<std::uint8_t>(value / 10u);
+    digits[2 - count] = static_cast<char>('0' + value % 10U);
+    value = static_cast<std::uint8_t>(value / 10U);
     ++count;
-  } while (value != 0);
-  for (std::uint8_t index = 0; index < count; ++index) {
-    draw_glyph(pixels, width, height, x + index * 12, y, digits[3 - count + index], color, 2);
+  } while (value != 0 && count < digits.size());
+  if (pad_two && count == 1) {
+    digits[1] = '0';
+    count = 2;
   }
+  return {digits.data() + digits.size() - count, count};
+}
+
+std::uint16_t contrast_text(std::uint16_t color) {
+  const auto red = static_cast<unsigned>((color >> 11) & 0x1FU) * 255U / 31U;
+  const auto green = static_cast<unsigned>((color >> 5) & 0x3FU) * 255U / 63U;
+  const auto blue = static_cast<unsigned>(color & 0x1FU) * 255U / 31U;
+  // Squared channels approximate linear-light luminance closely enough for
+  // choosing the higher-contrast endpoint on an RGB565 panel. The threshold
+  // is the WCAG crossover where black and white have equal contrast (~0.179).
+  const auto luminance = 2126U * red * red + 7152U * green * green +
+                         722U * blue * blue;
+  return luminance > 65025U * 1790U ? ColorBackground : ColorForeground;
+}
+
+DeckFontRole title_font(std::string_view text, std::int32_t max_width) {
+  for (const auto role : {DeckFontRole::Title, DeckFontRole::CompactTitle,
+                          DeckFontRole::Bank}) {
+    if (text_width(text, deck_font(role)) <= max_width) return role;
+  }
+  return DeckFontRole::Bank;
 }
 
 }  // namespace
@@ -114,7 +266,8 @@ void LiveRenderer::render(const LiveView& view) {
     }
     for (unsigned index = 0; index < 4; ++index) {
       if (view.positions[index] != previous_.positions[index] ||
-          !same_position_view(view.selectedPositions[index], previous_.selectedPositions[index])) {
+          !same_position_view(view.selectedPositions[index],
+                              previous_.selectedPositions[index])) {
         render_quadrant(index, view);
       }
     }
@@ -129,82 +282,122 @@ void LiveRenderer::render(const LiveView& view) {
 }
 
 void LiveRenderer::render_header(const LiveView& view) {
-  render_rect({0, 0, ScreenWidth, HeaderHeight}, Region::Header, view, 0, ColorPanel);
+  render_rect({0, 0, ScreenWidth, HeaderHeight}, Region::Header, view, 0,
+              ColorPanel);
 }
 
 void LiveRenderer::render_quadrant(unsigned index, const LiveView& view) {
-  const auto x = static_cast<std::uint16_t>((index % 2) * QuadrantWidth);
-  const auto y = static_cast<std::uint16_t>(HeaderHeight + (index / 2) * QuadrantHeight);
+  const auto x = static_cast<std::uint16_t>(
+      DeckInset + (index % 2) * (QuadrantWidth + DeckGap));
+  const auto y = static_cast<std::uint16_t>(
+      DeckTop + (index / 2) * (QuadrantHeight + DeckGap));
   const auto configured = view.selectedPositions[index].accentRgb565;
   const auto accent = configured == 0 ? ColorAccent : configured;
-  render_rect({x, y, QuadrantWidth, QuadrantHeight}, Region::Quadrant, view, index, accent);
+  render_rect({x, y, QuadrantWidth, QuadrantHeight}, Region::Quadrant, view,
+              index, accent);
 }
 
 void LiveRenderer::render_footer(const LiveView& view) {
-  render_rect({0, FooterY, ScreenWidth, FooterHeight}, Region::Footer, view, 0, ColorPanel);
+  render_rect({0, FooterY, ScreenWidth, FooterHeight}, Region::Footer, view, 0,
+              ColorPanel);
 }
 
 void LiveRenderer::render_rect(Rect rect, Region region, const LiveView& view,
-                               unsigned quadrant_index, std::uint16_t border) {
-  rect.width = clamp_width(rect.width);
-  if (rect.width == 0 || rect.height == 0) return;
-  const auto rows_per_transfer = static_cast<std::uint16_t>(TilePixels / rect.width);
+                               unsigned quadrant_index,
+                               std::uint16_t accent) {
+  if (rect.width == 0 || rect.height == 0 || rect.width > ScreenWidth) return;
+  const auto rows_per_transfer =
+      static_cast<std::uint16_t>(TilePixels / rect.width);
   const auto transfer_rows = std::max<std::uint16_t>(1, rows_per_transfer);
-  for (std::uint16_t y_offset = 0; y_offset < rect.height; y_offset += transfer_rows) {
-    const auto rows = std::min<std::uint16_t>(transfer_rows, rect.height - y_offset);
+  for (std::uint16_t y_offset = 0; y_offset < rect.height;
+       y_offset += transfer_rows) {
+    const auto rows =
+        std::min<std::uint16_t>(transfer_rows, rect.height - y_offset);
     const auto pixel_count = static_cast<std::size_t>(rect.width) * rows;
-    const auto pixels = std::span<std::uint16_t>(pixels_.data(), pixel_count);
-    fill(pixels, ColorBackground);
-    draw_border(pixels, rect.width, rows, y_offset, rect.height, border);
-    const auto origin_y = static_cast<std::int32_t>(rect.y + y_offset);
+    auto pixels = std::span<std::uint16_t>(pixels_.data(), pixel_count);
+    std::fill(pixels.begin(), pixels.end(), ColorBackground);
+    const Canvas canvas{pixels, rect.width, rows, y_offset, rect.height};
 
     if (region == Region::Header) {
-      const auto status_color = view.configurationError ? ColorError : ColorForeground;
-      draw_text(pixels, rect.width, rows, 12, 7 - origin_y,
-                bounded_text(view.bankName, "EMPTY"), status_color, 2);
-      draw_text(pixels, rect.width, rows, 264, 7 - origin_y, "B", ColorMuted, 2);
-      draw_decimal(pixels, rect.width, rows, 276, 7 - origin_y, view.bank, status_color);
-      draw_text(pixels, rect.width, rows, 316, 7 - origin_y, "P", ColorMuted, 2);
-      draw_decimal(pixels, rect.width, rows, 328, 7 - origin_y, view.page, status_color);
-      draw_text(pixels, rect.width, rows, 346, 7 - origin_y, view.usbConnected ? "USB+" : "USB-",
-                view.usbConnected ? ColorSuccess : ColorMuted, 2);
-      draw_text(pixels, rect.width, rows, 398, 7 - origin_y, view.configurationError ? "C!" : "C+",
-                view.configurationError ? ColorError : ColorSuccess, 2);
-      if (view.queueOverflow) draw_text(pixels, rect.width, rows, 424, 7 - origin_y, "Q!", ColorWarning, 2);
-      if (view.watchdogReset) draw_text(pixels, rect.width, rows, 450, 7 - origin_y, "W!", ColorWarning, 2);
+      fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
+      std::array<char, 3> bank_digits{};
+      draw_text(canvas, 16, 1, "BANK", DeckFontRole::Label, ColorMuted);
+      draw_text(canvas, 55, 1, decimal_text(view.bank, bank_digits, true),
+                DeckFontRole::Label, ColorMuted);
+      draw_text(canvas, 16, 12, bounded_text(view.bankName, "FACTORY"),
+                DeckFontRole::Bank, ColorForeground);
+
+      if (view.configurationError) {
+        draw_text_right(canvas, 463, 10, "CONFIG!", DeckFontRole::Label,
+                        ColorError);
+      } else if (view.queueOverflow) {
+        draw_text_right(canvas, 463, 10, "QUEUE!", DeckFontRole::Label,
+                        ColorWarning);
+      } else if (view.watchdogReset) {
+        draw_text_right(canvas, 463, 10, "WATCHDOG!", DeckFontRole::Label,
+                        ColorWarning);
+      } else {
+        const std::array<char, 7> page_text{
+            'P', ' ', static_cast<char>('0' + view.page), ' ', '/', ' ', '4'};
+        draw_text(canvas, 355, 10,
+                  std::string_view(page_text.data(), page_text.size()),
+                  DeckFontRole::Label, ColorMuted);
+        draw_text(canvas, 417, 10, view.usbConnected ? "USB" : "USB-",
+                  DeckFontRole::Label,
+                  view.usbConnected ? ColorForeground : ColorMuted);
+        draw_circle(canvas, 461, 21, 5,
+                    view.usbConnected ? ColorSuccess : ColorMuted);
+      }
     } else if (region == Region::Quadrant) {
       const auto& position = view.selectedPositions[quadrant_index];
-      const auto accent = position.accentRgb565 == 0 ? ColorAccent : position.accentRgb565;
-      draw_glyph(pixels, rect.width, rows, 16, static_cast<std::int32_t>(rect.y + 18) - origin_y,
-                 static_cast<char>('A' + quadrant_index), ColorForeground, 3);
-      draw_text(pixels, rect.width, rows, 64, static_cast<std::int32_t>(rect.y + 18) - origin_y,
-                bounded_text(position.label, "EMPTY"), accent, 2);
-      draw_text(pixels, rect.width, rows, 64, static_cast<std::int32_t>(rect.y + 66) - origin_y,
-                view.positions[quadrant_index] == 2 ? "P2" : "P1", accent, 2);
+      const auto active = view.positions[quadrant_index] == 2;
+      const auto foreground = active ? contrast_text(accent) : ColorForeground;
+      fill_rounded_rect(canvas, 10, active ? accent : ColorTile);
+      if (!active) fill_rounded_rail(canvas, 6, 10, accent);
+
+      const std::array<char, 1> switch_name{
+          static_cast<char>('A' + quadrant_index)};
+      draw_text(canvas, 18, -5,
+                std::string_view(switch_name.data(), switch_name.size()),
+                DeckFontRole::Switch,
+                active ? foreground : accent);
+      const auto label = bounded_text(position.label, "EMPTY");
+      const auto role = title_font(label, rect.width - 78);
+      draw_text(canvas, 68, 15, label, role, foreground);
+      draw_text(canvas, 68, 60,
+                active ? std::string_view("POSITION 2 / ON")
+                       : std::string_view("POSITION 1"),
+                DeckFontRole::Label,
+                active ? foreground : ColorMuted);
+      fill_rect(canvas, 68, 84, active ? 128 : 88, 3,
+                active ? foreground : accent);
     } else {
-      const auto label = bounded_text(view.expressionLabel, "NONE");
-      draw_text(pixels, rect.width, rows, 12, static_cast<std::int32_t>(FooterY + 8) - origin_y,
-                "EXPR", ColorForeground, 2);
-      draw_text(pixels, rect.width, rows, 72, static_cast<std::int32_t>(FooterY + 8) - origin_y,
-                label, view.expressionAvailable ? ColorForeground : ColorMuted, 2);
-      if (!view.expressionAvailable) {
-        draw_text(pixels, rect.width, rows, 408, static_cast<std::int32_t>(FooterY + 8) - origin_y,
-                  "-", ColorMuted, 2);
+      fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
+      auto cursor = draw_text(canvas, 16, 10, "EXP / ", DeckFontRole::Label,
+                              ColorForeground);
+      draw_text(canvas, cursor, 10,
+                bounded_text(view.expressionLabel, "NONE"),
+                DeckFontRole::Label,
+                view.expressionAvailable ? ColorForeground : ColorMuted);
+      fill_rect(canvas, 175, 17, 237, 6, ColorMeterTrack);
+      if (view.expressionAvailable) {
+        const auto meter_width = static_cast<std::int32_t>(
+            static_cast<unsigned>(view.expressionValue) * 237U / 127U);
+        fill_rect(canvas, 175, 17, meter_width, 6, ColorAccent);
+        std::array<char, 3> value_digits{};
+        const auto value = decimal_text(view.expressionValue, value_digits);
+        draw_text_right(canvas, 463, 4, value, DeckFontRole::CompactTitle,
+                        ColorAccent);
       } else {
-        draw_decimal(pixels, rect.width, rows, 432, static_cast<std::int32_t>(FooterY + 8) - origin_y,
-                     view.expressionValue, ColorForeground);
-        const auto bar_width = static_cast<std::uint16_t>((static_cast<unsigned>(view.expressionValue) * 160u) / 127u);
-        for (std::uint16_t x = 0; x < bar_width; ++x) {
-          for (std::uint16_t y = 30; y < 38; ++y) {
-            const auto local_y = static_cast<std::int32_t>(FooterY + y) - origin_y;
-            if (local_y >= 0 && local_y < rows && x + 240 < rect.width) {
-              pixels[static_cast<std::size_t>(local_y) * rect.width + 240 + x] = ColorAccent;
-            }
-          }
-        }
+        draw_text_right(canvas, 463, 4, "--", DeckFontRole::CompactTitle,
+                        ColorMuted);
       }
     }
-    target_.write({rect.x, static_cast<std::uint16_t>(rect.y + y_offset), rect.width, rows}, pixels);
+
+    target_.write(
+        {rect.x, static_cast<std::uint16_t>(rect.y + y_offset), rect.width,
+         rows},
+        pixels);
   }
 }
 

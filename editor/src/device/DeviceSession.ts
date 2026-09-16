@@ -4,10 +4,11 @@ import {
 } from "@midi-pedal/protocol";
 
 import { validateConfig } from "@midi-pedal/protocol";
-import type { DeviceTransport } from "./DeviceTransport";
+import { TransportError, type DeviceTransport } from "./DeviceTransport";
 
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
+const responseTimeout = Symbol("response-timeout");
 
 export class DeviceSessionError extends Error {
   constructor(readonly code: string, message: string) { super(message); this.name = "DeviceSessionError"; }
@@ -26,6 +27,7 @@ export class DeviceSession {
   private capabilities?: DeviceCapabilities;
   private info?: ConfigInfo;
   private connected = false;
+  private pendingRead?: Promise<Uint8Array | null>;
 
   constructor(private readonly transport: DeviceTransport, options: SessionOptions = {}) { this.timeoutMs = options.timeoutMs ?? 1000; }
 
@@ -40,12 +42,16 @@ export class DeviceSession {
       this.connected = true;
       return { capabilities, info };
     } catch (error) {
-      await this.transport.close();
+      try { await this.transport.close(); } catch { /* preserve the connection failure */ }
       throw error;
     }
   }
 
-  async disconnect(): Promise<void> { this.connected = false; await this.transport.close(); }
+  async disconnect(): Promise<void> {
+    this.connected = false;
+    try { await this.transport.close(); }
+    finally { this.pendingRead = undefined; }
+  }
 
   async getCapabilities(): Promise<DeviceCapabilities> {
     const value = await this.requestJson<DeviceCapabilities>(Command.GET_CAPABILITIES, new Uint8Array());
@@ -117,26 +123,41 @@ export class DeviceSession {
   private async request(command: Command, payload: Uint8Array): Promise<Uint8Array> {
     const requestId = this.nextRequestId++ >>> 0;
     for (let attempt = 0; attempt < 3; attempt += 1) {
-      await this.transport.write(encodeFrame({ requestId, command, flags: 0, payload }));
       try {
+        await this.transport.write(encodeFrame({ requestId, command, flags: 0, payload }));
         return await this.waitForResponse(requestId, command);
       } catch (error) {
-        if (!(error instanceof DeviceSessionError) || (error.code !== "TIMEOUT" && error.code !== "DISCONNECTED")) throw error;
-        if (attempt === 2) throw error;
+        const sessionError = error instanceof TransportError
+          ? new DeviceSessionError(error.code, error.message)
+          : error;
+        if (!(sessionError instanceof DeviceSessionError) || sessionError.code !== "TIMEOUT" || attempt === 2) throw sessionError;
       }
     }
     throw new DeviceSessionError("TIMEOUT", "device did not respond");
+  }
+
+  private readTransport(): Promise<Uint8Array | null> {
+    if (!this.pendingRead) this.pendingRead = this.transport.read();
+    return this.pendingRead;
   }
 
   private async waitForResponse(requestId: number, command: Command): Promise<Uint8Array> {
     const deadline = Date.now() + this.timeoutMs;
     while (Date.now() < deadline) {
       const remaining = Math.max(1, deadline - Date.now());
-      const bytes = await Promise.race([
-        this.transport.read(),
-        new Promise<null>(resolve => setTimeout(() => resolve(null), remaining))
-      ]);
-      if (bytes === null) throw new DeviceSessionError("TIMEOUT", "device response timed out");
+      const pendingRead = this.readTransport();
+      let bytes: Uint8Array | null | typeof responseTimeout;
+      try {
+        bytes = await Promise.race([
+          pendingRead,
+          new Promise<typeof responseTimeout>(resolve => setTimeout(() => resolve(responseTimeout), remaining))
+        ]);
+      } catch (error) {
+        if (this.pendingRead === pendingRead) this.pendingRead = undefined;
+        throw error;
+      }
+      if (bytes === responseTimeout) throw new DeviceSessionError("TIMEOUT", "device response timed out");
+      if (this.pendingRead === pendingRead) this.pendingRead = undefined;
       if (bytes === null) throw new DeviceSessionError("DISCONNECTED", "device disconnected");
       for (const event of this.frameDecoder.push(bytes)) {
         if (event.type === "error") continue;

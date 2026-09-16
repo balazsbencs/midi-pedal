@@ -38,10 +38,13 @@ class ImageReader {
   explicit ImageReader(std::span<const std::byte> bytes) : bytes_(bytes) {}
 
   ImageInspection inspect() const;
+  [[nodiscard]] bool validate_all_banks() const;
   [[nodiscard]] std::span<const std::byte> bank_record(std::uint8_t bankIndex) const;
   bool load_bank(std::uint8_t bankIndex, BankConfig& output) const;
 
  private:
+  [[nodiscard]] std::span<const std::byte> bank_record_unchecked(std::uint8_t bank_index,
+                                                                 std::uint16_t bank_count) const;
   std::span<const std::byte> bytes_;
 };
 

@@ -133,6 +133,7 @@ int main() {
     runtime.finish_control_phase();
     ports.midi().service();
     watchdog.feed();
+    display.service();
     tight_loop_contents();
   }
 }

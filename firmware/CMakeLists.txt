@@ -15,6 +15,7 @@ add_library(midi_core
   src/core/config_store.cpp
   src/core/frame_decoder.cpp
   src/display/live_renderer.cpp
+  src/display/font_deck.cpp
   src/display/font_ascii.cpp
   src/usb/usb_descriptors.c
   src/usb/usb_transport.cpp
@@ -139,7 +140,7 @@ if(MIDI_PEDAL_BUILD_FIRMWARE)
     src/display_renderer_test_main.cpp
     src/display/st7796s.cpp
     src/display/live_renderer.cpp
-    src/display/font_ascii.cpp
+    src/display/font_deck.cpp
   )
   target_link_libraries(display_renderer_test PRIVATE pico_stdlib hardware_gpio hardware_spi)
   target_include_directories(display_renderer_test PRIVATE src)

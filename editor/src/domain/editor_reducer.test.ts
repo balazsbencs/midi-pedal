@@ -38,5 +38,18 @@ describe("editor reducer", () => {
     expect(moved.draft.config.banks[0]!.pages[0]!.presets[0]!.slots[0]!.id).toBe(second.id);
     expect(moved.draft.config.banks[0]!.pages[0]!.presets[0]!.slots[1]!.id).toBe(slot.id);
   });
-});
 
+  it("marks the pedal offline when synchronization loses the serial connection", () => {
+    const state = makeInitialState();
+    const connected = editorReducer(state, { type: "device.loaded", document: state.draft, metadata: {} });
+    const failed = editorReducer(connected, {
+      type: "sync.failed",
+      message: "DISCONNECTED: serial read failed",
+      previousConfigurationIntact: true,
+      deviceDisconnected: true
+    });
+
+    expect(failed.device.connected).toBe(false);
+    expect(failed.sync).toMatchObject({ stage: "error", message: "DISCONNECTED: serial read failed" });
+  });
+});

@@ -10,20 +10,25 @@ namespace midi::display {
 
 inline constexpr std::uint16_t ScreenWidth = 480;
 inline constexpr std::uint16_t ScreenHeight = 320;
-inline constexpr std::uint16_t HeaderHeight = 48;
-inline constexpr std::uint16_t FooterHeight = 48;
+inline constexpr std::uint16_t HeaderHeight = 42;
+inline constexpr std::uint16_t FooterHeight = 44;
 inline constexpr std::uint16_t FooterY = ScreenHeight - FooterHeight;
-inline constexpr std::uint16_t QuadrantWidth = ScreenWidth / 2;
-inline constexpr std::uint16_t QuadrantHeight = (ScreenHeight - HeaderHeight - FooterHeight) / 2;
+inline constexpr std::uint16_t DeckInset = 8;
+inline constexpr std::uint16_t DeckGap = 8;
+inline constexpr std::uint16_t DeckTop = HeaderHeight + DeckGap;
+inline constexpr std::uint16_t QuadrantWidth = 228;
+inline constexpr std::uint16_t QuadrantHeight = 105;
 
-inline constexpr std::uint16_t ColorBackground = 0x0000;
-inline constexpr std::uint16_t ColorPanel = 0x18E3;
-inline constexpr std::uint16_t ColorForeground = 0xFFFF;
-inline constexpr std::uint16_t ColorMuted = 0x8410;
-inline constexpr std::uint16_t ColorAccent = 0x07FF;
-inline constexpr std::uint16_t ColorSuccess = 0x07E0;
-inline constexpr std::uint16_t ColorError = 0xF800;
-inline constexpr std::uint16_t ColorWarning = 0xFD20;
+inline constexpr std::uint16_t ColorBackground = 0x0082;
+inline constexpr std::uint16_t ColorPanel = 0x08C3;
+inline constexpr std::uint16_t ColorTile = 0x1105;
+inline constexpr std::uint16_t ColorForeground = 0xF7DF;
+inline constexpr std::uint16_t ColorMuted = 0x6C11;
+inline constexpr std::uint16_t ColorAccent = 0x2F3A;
+inline constexpr std::uint16_t ColorSuccess = 0x4FB4;
+inline constexpr std::uint16_t ColorError = 0xF2EB;
+inline constexpr std::uint16_t ColorWarning = 0xFE48;
+inline constexpr std::uint16_t ColorMeterTrack = 0x21C7;
 
 struct Rect {
   std::uint16_t x{};

@@ -1,5 +1,6 @@
 #include "st7796s.hpp"
 
+#include <algorithm>
 #include <array>
 
 #include "../board/pico2_pins.hpp"
@@ -64,7 +65,7 @@ void St7796sDisplay::initialize() {
   command(0x11);  // Sleep out.
   sleep_ms(150);
   command(0x13);  // Normal display mode.
-  command(0x21);  // Panel inversion on.
+  command(0x20);  // Display inversion off; this panel renders logical RGB565 directly.
   command(0x29);  // Display on.
   sleep_ms(150);
   initialized_ = true;
@@ -109,9 +110,7 @@ void St7796sDisplay::set_window(Rect rect) {
 
 void St7796sDisplay::present(const LiveView& view) {
   if (!initialized_) return;
-  frame_dirty_ = false;
   renderer_.render(view);
-  if (frame_dirty_) flush_frame();
 }
 
 void St7796sDisplay::write(Rect rect, std::span<const std::uint16_t> pixels) {
@@ -137,25 +136,58 @@ void St7796sDisplay::write(Rect rect, std::span<const std::uint16_t> pixels) {
           static_cast<std::uint8_t>(pixels[source]);
     }
   }
-  frame_dirty_ = true;
+  mark_dirty(rect);
 #else
   (void)pixels;
 #endif
 }
 
-void St7796sDisplay::flush_frame() {
+void St7796sDisplay::mark_dirty(Rect rect) {
+  (void)rect;
+  // This module handles a full 480x320 window reliably, but ignores or
+  // misapplies partial vertical windows. Keep the proven full-screen address
+  // window while service() spreads its transfer over short control-loop steps.
+  pending_rect_ = {0, 0, ScreenWidth, ScreenHeight};
+  dirty_pending_ = true;
+}
+
+void St7796sDisplay::begin_transfer() {
 #ifdef PICO_ON_DEVICE
-  set_window({0, 0, ScreenWidth, ScreenHeight});
+  if (!dirty_pending_ || transfer_active_) return;
+  transfer_rect_ = pending_rect_;
+  dirty_pending_ = false;
+  transfer_row_ = 0;
+  set_window(transfer_rect_);
   const std::uint8_t memory_write = 0x2C;
   gpio_put(board::DisplayCs, 0);
   gpio_put(board::DisplayDc, 0);
   spi_write_blocking(spi0, &memory_write, 1);
   gpio_put(board::DisplayDc, 1);
-  for (std::uint16_t row = 0; row < ScreenHeight; ++row) {
-    const auto offset = static_cast<std::size_t>(row) * ScanlineBytes;
-    spi_write_blocking(spi0, frame_bytes.data() + offset, ScanlineBytes);
+  transfer_active_ = true;
+#endif
+}
+
+void St7796sDisplay::service() {
+#ifdef PICO_ON_DEVICE
+  if (!initialized_) return;
+  if (!transfer_active_) begin_transfer();
+  if (!transfer_active_) return;
+
+  const auto rows = std::min<std::uint16_t>(
+      RowsPerService, transfer_rect_.height - transfer_row_);
+  const auto bytes_per_row = static_cast<std::size_t>(transfer_rect_.width) * 2;
+  for (std::uint16_t index = 0; index < rows; ++index) {
+    const auto row = static_cast<std::uint16_t>(transfer_rect_.y +
+                                                transfer_row_ + index);
+    const auto offset = static_cast<std::size_t>(row) * ScanlineBytes +
+                        static_cast<std::size_t>(transfer_rect_.x) * 2;
+    spi_write_blocking(spi0, frame_bytes.data() + offset, bytes_per_row);
   }
-  gpio_put(board::DisplayCs, 1);
+  transfer_row_ = static_cast<std::uint16_t>(transfer_row_ + rows);
+  if (transfer_row_ == transfer_rect_.height) {
+    gpio_put(board::DisplayCs, 1);
+    transfer_active_ = false;
+  }
 #endif
 }
 

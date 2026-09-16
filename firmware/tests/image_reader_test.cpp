@@ -80,3 +80,12 @@ TEST(ImageReader, RejectsBadCrcAndBadOffset) {
   midi::BankConfig bank{};
   EXPECT_FALSE(midi::ImageReader(std::span<const std::byte>(offsetBytes.data(), offsetBytes.size())).load_bank(0, bank));
 }
+
+TEST(ImageReader, ValidatesEveryBankInAFullImage) {
+  auto bytes = read_fixture("full-boundary-valid.bin");
+  const auto image = std::span<const std::byte>(bytes.data(), bytes.size());
+  EXPECT_TRUE(midi::ImageReader(image).validate_all_banks());
+
+  bytes.back() ^= std::byte{0x01};
+  EXPECT_FALSE(midi::ImageReader(image).validate_all_banks());
+}

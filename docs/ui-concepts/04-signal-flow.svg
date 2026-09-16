@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320" viewBox="0 0 480 320">
+  <!-- Concept 04: Signal Flow. Four presets read as a pedal-chain sequence. -->
+  <rect width="480" height="320" fill="#0B0A10"/>
+  <text x="16" y="28" fill="#F3EFFA" font-family="Avenir Next Condensed, sans-serif" font-size="20" font-weight="700">MIDNIGHT SET</text>
+  <text x="465" y="27" text-anchor="end" fill="#968FA3" font-family="Avenir Next, sans-serif" font-size="10" font-weight="700">BANK 07  ·  PAGE 2  ·  USB</text>
+  <path d="M32 72V246" fill="none" stroke="#40394B" stroke-width="4"/>
+
+  <g font-family="Avenir Next Condensed, sans-serif">
+    <circle cx="32" cy="74" r="13" fill="#22D3C5"/>
+    <text x="32" y="79" text-anchor="middle" fill="#061714" font-family="DIN Condensed, sans-serif" font-size="16" font-weight="700">A</text>
+    <text x="60" y="70" fill="#F3EFFA" font-size="22" font-weight="700">CLEAN</text>
+    <text x="60" y="88" fill="#81798E" font-size="11" font-weight="700">POSITION 1</text>
+    <rect x="374" y="59" width="72" height="28" rx="5" fill="#1A3035"/>
+    <text x="410" y="78" text-anchor="middle" fill="#22D3C5" font-size="12" font-weight="700">P1</text>
+
+    <rect x="13" y="104" width="454" height="58" rx="9" fill="#9D6BFF"/>
+    <circle cx="32" cy="133" r="13" fill="#1C0E3A"/>
+    <text x="32" y="138" text-anchor="middle" fill="#DBCFFF" font-family="DIN Condensed, sans-serif" font-size="16" font-weight="700">B</text>
+    <text x="60" y="137" fill="#160A2D" font-size="25" font-weight="700">DRIVE</text>
+    <text x="184" y="137" fill="#402574" font-size="12" font-weight="700">POSITION 2 · ON</text>
+    <rect x="358" y="119" width="89" height="27" rx="5" fill="#1C0E3A"/>
+    <text x="403" y="137" text-anchor="middle" fill="#DBCFFF" font-size="12" font-weight="700">ACTIVE</text>
+
+    <circle cx="32" cy="192" r="13" fill="#FF6B8B"/>
+    <text x="32" y="197" text-anchor="middle" fill="#2A0711" font-family="DIN Condensed, sans-serif" font-size="16" font-weight="700">C</text>
+    <text x="60" y="188" fill="#F3EFFA" font-size="22" font-weight="700">CHORUS</text>
+    <text x="60" y="206" fill="#81798E" font-size="11" font-weight="700">POSITION 1</text>
+    <rect x="374" y="177" width="72" height="28" rx="5" fill="#321A27"/>
+    <text x="410" y="196" text-anchor="middle" fill="#FF6B8B" font-size="12" font-weight="700">P1</text>
+
+    <circle cx="32" cy="250" r="13" fill="#FFC857"/>
+    <text x="32" y="255" text-anchor="middle" fill="#291B00" font-family="DIN Condensed, sans-serif" font-size="16" font-weight="700">D</text>
+    <text x="60" y="246" fill="#F3EFFA" font-size="22" font-weight="700">DELAY</text>
+    <text x="60" y="264" fill="#81798E" font-size="11" font-weight="700">POSITION 1</text>
+    <rect x="374" y="235" width="72" height="28" rx="5" fill="#382E16"/>
+    <text x="410" y="254" text-anchor="middle" fill="#FFC857" font-size="12" font-weight="700">P1</text>
+  </g>
+
+  <rect x="0" y="283" width="480" height="37" fill="#17131E"/>
+  <text x="16" y="307" fill="#BEB7C8" font-family="Avenir Next Condensed, sans-serif" font-size="13" font-weight="700">VOLUME</text>
+  <rect x="86" y="296" width="310" height="8" rx="4" fill="#332D3B"/>
+  <rect x="86" y="296" width="234" height="8" rx="4" fill="#22D3C5"/>
+  <text x="458" y="308" text-anchor="end" fill="#F3EFFA" font-family="DIN Condensed, sans-serif" font-size="22" font-weight="700">96</text>
+</svg>

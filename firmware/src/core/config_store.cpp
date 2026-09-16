@@ -109,11 +109,7 @@ bool ConfigStore::image_valid(std::uint8_t slot, std::uint32_t image_size, std::
   const ImageReader reader(std::span<const std::byte>(mapped, image_size));
   const auto inspection = reader.inspect();
   if (inspection.error != ImageError::None || inspection.sequence != sequence || inspection.crc32 != image_crc32) return false;
-  for (std::uint8_t index = 0; index < inspection.bankCount; ++index) {
-    BankConfig bank{};
-    if (!reader.load_bank(index, bank)) return false;
-  }
-  return true;
+  return reader.validate_all_banks();
 }
 
 void ConfigStore::scan() {
