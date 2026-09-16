@@ -44,11 +44,12 @@ function ajvErrors(input: ErrorObject[] | null | undefined): ValidationError[] {
 }
 
 function toDefaultBank(bankIndex: number): Bank {
+  const defaultAccents = [0x2f3a, 0xf2eb, 0xccdf, 0xfe48] as const;
   const pages = [0, 1, 2, 3].map(pageIndex => {
     const presets = [0, 1, 2, 3].map(presetIndex => ({
       id: 0x30000000 + bankIndex * 16 + pageIndex * 4 + presetIndex + 1,
-      position1: { label: "EMPTY", accentRgb565: 0x7bef },
-      position2: { label: "EMPTY", accentRgb565: 0x7bef },
+      position1: { label: "EMPTY", accentRgb565: defaultAccents[presetIndex]! },
+      position2: { label: "EMPTY", accentRgb565: defaultAccents[presetIndex]! },
       toggleOn: null,
       slots: [],
     } satisfies Preset)) as unknown as [Preset, Preset, Preset, Preset];

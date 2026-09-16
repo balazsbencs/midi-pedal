@@ -24,7 +24,10 @@ describe("config v1", () => {
   it("accepts the safe empty 128-bank document", () => {
     const result = validateConfig(minimal);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.value.config.banks).toHaveLength(128);
+    if (result.ok) {
+      expect(result.value.config.banks).toHaveLength(128);
+      expect(result.value.config.banks[0]?.pages[0]?.presets.map(preset => preset.position1.accentRgb565)).toEqual([0x2f3a, 0xf2eb, 0xccdf, 0xfe48]);
+    }
   });
 
   it("accepts the full boundary fixture and normalizes its remaining banks", () => {

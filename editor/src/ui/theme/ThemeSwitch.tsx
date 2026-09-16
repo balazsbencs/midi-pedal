@@ -15,8 +15,8 @@ export function ThemeSwitch({ theme, onChange }: ThemeSwitchProps) {
       aria-pressed={theme === "dark"}
       onClick={() => onChange(next)}
     >
-      {theme === "dark" ? "☀ Light" : "☾ Dark"}
+      <span aria-hidden="true">{theme === "dark" ? "☀" : "☾"}</span>
+      <span className="sr-only">{`Switch to ${next} theme`}</span>
     </button>
   );
 }
-

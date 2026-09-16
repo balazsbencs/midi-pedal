@@ -8,8 +8,8 @@ related_targets: ["editor/src/ui/workspace.css","editor/src/ui/theme/tokens.css"
 # Browser editor surface brief
 
 - Mode: operate. A musician or builder must move from bank selection to preset editing and device synchronization without losing page or switch context.
-- Direction: Studio Console. The reference dashboard contributes its persistent navigation rail, compact command bar, crisp card fields, restrained radius, and dense sans-serif hierarchy; the existing editor themes and product colors remain authoritative.
-- Memorable moment: the central 2×2 A–D deck mirrors the physical pedal while the selected preset remains visibly linked to the inspector.
+- Direction: Studio Console, built literally from the approved concept. The full-width command bar, bank rail, oversized colored A–D deck, tall inspector, compact status floor, dark material, and dense sans-serif hierarchy are the surface—not loose inspiration.
+- Memorable moment: four luminous, near-square cyan/coral/violet/yellow switch fields make the physical A–D pedal map unmistakable before any control is read; the selected color continues into the inspector.
 - Primary task: choose a bank and page, select a switch, edit its presentation and ordered messages, validate, then sync or export.
 - Constraints: preserve all current behavior and copy, 128 searchable banks, fixed A–D order, explicit light/dark themes, keyboard access, laptop and 200% zoom support, no backend, and no decorative charts or invented device capabilities.
 - Responsive rule: keep rail, map, and inspector together on wide screens; place the inspector below the map on compact laptops; stack all regions on phones while keeping every device and file action reachable.

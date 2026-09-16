@@ -1,22 +1,17 @@
 import type { CSSProperties, KeyboardEvent } from "react";
 import type { Bank } from "@midi-pedal/protocol";
+import { rgb565ToHex } from "./color";
 
 interface PageMapProps {
   bank: Bank;
   selectedPage: number;
   selectedPreset: number;
+  onBankNameChange: (value: string) => void;
   onPageSelect: (index: number) => void;
   onPresetSelect: (index: number) => void;
 }
 
-function rgb565ToHex(value: number): string {
-  const red = Math.round(((value >> 11) & 0x1f) * 255 / 31);
-  const green = Math.round(((value >> 5) & 0x3f) * 255 / 63);
-  const blue = Math.round((value & 0x1f) * 255 / 31);
-  return `#${[red, green, blue].map(channel => channel.toString(16).padStart(2, "0")).join("")}`;
-}
-
-export function PageMap({ bank, selectedPage, selectedPreset, onPageSelect, onPresetSelect }: PageMapProps) {
+export function PageMap({ bank, selectedPage, selectedPreset, onBankNameChange, onPageSelect, onPresetSelect }: PageMapProps) {
   const page = bank.pages[selectedPage]!;
   const selectPageFromKeyboard = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     let next = index;
@@ -32,9 +27,13 @@ export function PageMap({ bank, selectedPage, selectedPreset, onPageSelect, onPr
   return (
     <section className="map-section" aria-labelledby="page-map-title">
       <div className="section-heading">
-        <div>
+        <div className="bank-title-block">
           <p className="eyebrow">LIVE SURFACE</p>
-          <h2 id="page-map-title">{bank.name}</h2>
+          <h2 id="page-map-title" className="sr-only">{bank.name}</h2>
+          <label className="bank-title-editor">
+            <span className="sr-only">Bank name</span>
+            <input id="bank-name" maxLength={20} value={bank.name} onChange={event => onBankNameChange(event.target.value)} />
+          </label>
         </div>
         <span className="surface-hint">A / B / C / D</span>
       </div>
@@ -61,15 +60,9 @@ export function PageMap({ bank, selectedPage, selectedPreset, onPageSelect, onPr
               style={{ "--preset-color": rgb565ToHex(preset.position1.accentRgb565) } as CSSProperties}
               onClick={() => onPresetSelect(index)}
             >
-              <span className="preset-card-top">
-                <span className="preset-letter" aria-hidden="true">{letter}</span>
-                <span className="preset-context">{selected ? "Editing" : `Preset ${letter}`}</span>
-              </span>
-              <span className="preset-card-body">
-                <span className="preset-label">{label}</span>
-                <span className="preset-position">Position {preset.toggleOn ? "toggle" : "1"}</span>
-              </span>
-              <span className="preset-meta"><span>{preset.slots.length} message{preset.slots.length === 1 ? "" : "s"}</span><span aria-hidden="true">→</span></span>
+              <span className="preset-indicator" aria-hidden="true" />
+              <span className="preset-letter" aria-hidden="true">{letter}</span>
+              <span className="preset-label">{label}</span>
             </button>
           );
         })}

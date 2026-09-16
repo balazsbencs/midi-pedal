@@ -16,13 +16,9 @@ export function BankList({ banks, selected, onSelect }: BankListProps) {
   }, [banks, query]);
   return (
     <nav className="bank-pane" aria-label="Banks">
-      <div className="sidebar-brand">
-        <span className="brand-mark" aria-hidden="true"><span>M</span><span>P</span></span>
-        <div><strong>MIDI PEDAL</strong><span>Editor</span></div>
-      </div>
       <div className="sidebar-content">
         <div className="section-heading compact">
-          <div><p className="eyebrow">CONFIGURATION</p><h2>Banks</h2></div>
+          <h2>Banks</h2>
           <span className="count-badge">{banks.length}</span>
         </div>
         <label className="search-label" htmlFor="bank-search">Search banks</label>
@@ -37,11 +33,6 @@ export function BankList({ banks, selected, onSelect }: BankListProps) {
           ))}
           {visible.length === 0 && <li><p className="muted-copy">No banks match that search.</p></li>}
         </ul>
-        <aside className="sidebar-note" aria-label="Live map reminder">
-          <p className="eyebrow">LIVE MAP</p>
-          <strong>Four switches. One clear view.</strong>
-          <p>A–D always match the physical pedal layout.</p>
-        </aside>
       </div>
     </nav>
   );

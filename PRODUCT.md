@@ -45,7 +45,7 @@ The project pairs a deliberately focused live controller with a transparent, doc
 - USB or protected 9 V center-negative power.
 - Configuration is editor-only. The controller has no setup menu.
 - Desktop Chromium-family browsers are the supported editor environment for v1.
-- The editor provides explicit Light and Dark modes. The first visit follows the operating-system preference; an explicit user choice is stored locally and takes precedence afterward.
+- The editor provides explicit Light and Dark modes. The first visit opens in the dark Studio Console theme; an explicit user choice is stored locally and takes precedence afterward.
 
 ## Evidence on Hand
 

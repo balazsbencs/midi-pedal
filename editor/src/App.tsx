@@ -98,19 +98,17 @@ export function App() {
 
   return (
     <div className="app-shell">
+      <AppHeader state={state} theme={theme} onThemeChange={changeTheme} onConnect={() => void connect()} onExport={exportDraft} onImport={importDraft} onSync={() => void sync()} />
       <BankList banks={state.draft.config.banks} selected={state.selection.bank} onSelect={index => dispatch({ type: "selection.bankChanged", index })} />
-      <section className="app-stage">
-        <AppHeader state={state} theme={theme} onThemeChange={changeTheme} onConnect={() => void connect()} onExport={exportDraft} onImport={importDraft} onSync={() => void sync()} />
-        <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void readImport(file); event.target.value = ""; }} />
-        <main className="workspace-grid">
-          <section className="map-pane">
-            <PageMap bank={bank} selectedPage={state.selection.page} selectedPreset={state.selection.preset} onPageSelect={index => dispatch({ type: "selection.pageChanged", index })} onPresetSelect={index => dispatch({ type: "selection.presetChanged", index })} />
-            <ExpressionSummary expression={bank.expression} />
-          </section>
-          <PresetInspector state={state} dispatch={dispatch} />
-        </main>
-        <StatusBar state={state} />
-      </section>
+      <input ref={fileInputRef} type="file" accept="application/json,.json" hidden onChange={event => { const file = event.target.files?.[0]; if (file) void readImport(file); event.target.value = ""; }} />
+      <main className="workspace-grid">
+        <section className="map-pane">
+          <PageMap bank={bank} selectedPage={state.selection.page} selectedPreset={state.selection.preset} onBankNameChange={value => dispatch({ type: "bank.nameChanged", value })} onPageSelect={index => dispatch({ type: "selection.pageChanged", index })} onPresetSelect={index => dispatch({ type: "selection.presetChanged", index })} />
+          <ExpressionSummary expression={bank.expression} />
+        </section>
+        <PresetInspector state={state} dispatch={dispatch} />
+      </main>
+      <StatusBar state={state} />
     </div>
   );
 }

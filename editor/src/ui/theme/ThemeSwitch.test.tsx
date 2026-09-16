@@ -6,11 +6,10 @@ import { ThemeSwitch } from "./ThemeSwitch";
 import { readInitialTheme } from "./theme";
 
 describe("theme", () => {
-  it("uses system preference only when no explicit choice exists", () => {
+  it("defaults to the studio-console dark theme and honors explicit choices", () => {
     const emptyStorage = { getItem: () => null };
-    const darkMedia = { matches: true };
-    expect(readInitialTheme(emptyStorage, darkMedia)).toBe("dark");
-    expect(readInitialTheme({ getItem: () => "light" }, darkMedia)).toBe("light");
+    expect(readInitialTheme(emptyStorage, { matches: false })).toBe("dark");
+    expect(readInitialTheme({ getItem: () => "light" }, { matches: true })).toBe("light");
   });
 
   it("labels the action, not merely the current icon", async () => {
@@ -20,4 +19,3 @@ describe("theme", () => {
     expect(onChange).toHaveBeenCalledWith("light");
   });
 });
-

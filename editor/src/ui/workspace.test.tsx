@@ -25,14 +25,14 @@ function testBank(): Bank {
 
 describe("pedal workspace", () => {
   it("orders presets A/B/C/D as the physical 2x2 surface", () => {
-    render(<PageMap bank={testBank()} selectedPage={0} selectedPreset={0} onPageSelect={vi.fn()} onPresetSelect={vi.fn()} />);
+    render(<PageMap bank={testBank()} selectedPage={0} selectedPreset={0} onBankNameChange={vi.fn()} onPageSelect={vi.fn()} onPresetSelect={vi.fn()} />);
     expect(screen.getAllByRole("button", { name: /Preset/ }).map(button => button.dataset.switch)).toEqual(["A", "B", "C", "D"]);
   });
 
   it("selects page tabs and presets from the keyboard", async () => {
     const onPageSelect = vi.fn();
     const onPresetSelect = vi.fn();
-    render(<PageMap bank={testBank()} selectedPage={0} selectedPreset={0} onPageSelect={onPageSelect} onPresetSelect={onPresetSelect} />);
+    render(<PageMap bank={testBank()} selectedPage={0} selectedPreset={0} onBankNameChange={vi.fn()} onPageSelect={onPageSelect} onPresetSelect={onPresetSelect} />);
     screen.getByRole("tab", { name: "Page 2" }).focus();
     await userEvent.keyboard("{Enter}");
     expect(onPageSelect).toHaveBeenCalledWith(1);

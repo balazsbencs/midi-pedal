@@ -126,19 +126,20 @@ The assignment name and numeric value bracket one long horizontal meter. The met
 
 ## Browser Editor: Studio Console
 
-The browser editor is the desk-side companion to Chromatic Deck. It keeps the same cool blue-black surfaces and functional accent colors, but translates them into a dense production workspace: a persistent bank rail, a compact command bar, a central 2×2 switch map, and a stacked inspector.
+The browser editor is the desk-side companion to Chromatic Deck. Its dark theme is a faithful studio-console expression of the live surface: a full-width command bar, persistent bank rail, dominant 2×2 switch deck, and tall inspector rendered in the same saturated functional palette.
 
 ### Editor composition
 
-- The bank rail owns the full left edge and keeps search plus the numbered bank list visible.
-- The command bar prioritizes connection state, local file actions, and synchronization without competing with the editing canvas.
-- The A–D map remains the visual center of gravity and always preserves the physical 2×2 order.
+- The command bar spans the complete app frame: product lockup at left, device and file actions at right.
+- The bank rail begins below the command bar and keeps search plus the numbered bank list visible.
+- The A–D map is the visual center of gravity. Each switch becomes a large near-square field with a vivid cyan, coral, violet, or yellow identity, oversized letter, and compact label.
 - Preset settings, ordered messages, and expression settings live in one right-hand inspector with clear section boundaries.
 - At narrower widths the inspector moves below the map; on phones all regions become one readable vertical flow.
 
 ### Editor material and type
 
-- Retain the editor's existing light and dark theme colors. Use the cyan/blue accent for selection and action; preset colors remain data, not decoration.
+- The dark editor uses Stage Black, Signal Cyan, Hot Coral, Ultraviolet, Cue Yellow, and Connected Green directly. Light mode remains available as an accessible alternative.
+- Saved preset colors remain authoritative. Empty factory presets use the four canonical A–D colors so the editor still communicates the physical layout before configuration.
 - Use a neutral modern sans-serif stack with compact weights and tabular numbers. Headings are clear rather than oversized.
 - Surfaces use restrained 10–14 px radii, crisp one-pixel borders, and shallow shadows only where they separate the application frame from the canvas.
 - Controls are 38–42 px tall, labels remain visible, and focus rings are never removed.
