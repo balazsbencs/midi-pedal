@@ -13,6 +13,9 @@ struct LiveView {
   std::uint8_t page{};
   AsciiString<20> bankName{};
   std::array<std::uint8_t, 4> positions{};
+  // Physical switch state presented independently from persistent toggle
+  // positions, so input wiring and action handling are visible on the pedal.
+  std::uint8_t pressedMask{};
   std::array<PositionView, 4> selectedPositions{};
   bool expressionAvailable{};
   std::uint8_t expressionValue{};

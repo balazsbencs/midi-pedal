@@ -60,6 +60,8 @@ class PedalRuntime final : public ActionSink, public LiveActionState {
   bool navigate(NavigationCommand command) override;
 
  private:
+  static constexpr std::uint32_t PressFeedbackMs = 650;
+
   bool reload_bank();
   void refresh_configuration();
   void handle_event(const SwitchEvent& event);
@@ -93,6 +95,8 @@ class PedalRuntime final : public ActionSink, public LiveActionState {
   bool have_expression_schedule_{};
   std::uint32_t next_expression_sample_at_{};
   std::uint32_t usb_dropped_midi_{};
+  std::uint8_t pressed_mask_{};
+  std::uint32_t press_feedback_until_{};
   LiveView last_view_{};
   bool have_view_{};
   bool live_action_active_{};

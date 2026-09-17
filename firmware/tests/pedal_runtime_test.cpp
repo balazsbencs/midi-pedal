@@ -157,6 +157,38 @@ TEST(PedalRuntime, RoutesBothDestinationAndUpdatesToggleView) {
   EXPECT_FALSE(runtime.live_action_active());
 }
 
+TEST(PedalRuntime, ShowsRawSwitchInputLongEnoughForVisiblePressFeedback) {
+  FakeConfig config;
+  config.banks[0] = bank(10, 100);
+  FakeSwitches switches;
+  FakeExpression expression_input;
+  FakeMidi trs;
+  FakeRelays relays;
+  FakeUsb usb_api;
+  midi::usb::PicoUsbPort usb_port(usb_api);
+  midi::usb::UsbTransport usb_transport(usb_port);
+  FakeDisplay display;
+  midi::ExpressionProcessor expression({0, 4095});
+  midi::PedalRuntime runtime(config, switches, expression_input, trs, relays,
+                             usb_transport, usb_port, display, expression);
+
+  ASSERT_TRUE(runtime.initialize());
+  EXPECT_EQ(display.views.back().pressedMask, 0U);
+
+  switches.mask = 0x05;
+  runtime.tick(100);
+  EXPECT_EQ(display.views.back().pressedMask, 0x05U);
+
+  switches.mask = 0;
+  runtime.tick(101);
+  EXPECT_EQ(display.views.back().pressedMask, 0x05U);
+
+  runtime.tick(749);
+  EXPECT_EQ(display.views.back().pressedMask, 0x05U);
+  runtime.tick(750);
+  EXPECT_EQ(display.views.back().pressedMask, 0U);
+}
+
 TEST(PedalRuntime, PageChordWrapsAndReloadsExpressionAssignment) {
   FakeConfig config;
   config.banks[0] = bank(10, 100);

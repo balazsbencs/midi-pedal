@@ -265,7 +265,10 @@ void LiveRenderer::render(const LiveView& view) {
       render_header(view);
     }
     for (unsigned index = 0; index < 4; ++index) {
-      if (view.positions[index] != previous_.positions[index] ||
+      const auto switch_bit = static_cast<std::uint8_t>(1u << index);
+      if ((view.pressedMask & switch_bit) !=
+              (previous_.pressedMask & switch_bit) ||
+          view.positions[index] != previous_.positions[index] ||
           !same_position_view(view.selectedPositions[index],
                               previous_.selectedPositions[index])) {
         render_quadrant(index, view);
@@ -351,26 +354,32 @@ void LiveRenderer::render_rect(Rect rect, Region region, const LiveView& view,
     } else if (region == Region::Quadrant) {
       const auto& position = view.selectedPositions[quadrant_index];
       const auto active = view.positions[quadrant_index] == 2;
-      const auto foreground = active ? contrast_text(accent) : ColorForeground;
-      fill_rounded_rect(canvas, 10, active ? accent : ColorTile);
-      if (!active) fill_rounded_rail(canvas, 6, 10, accent);
+      const auto pressed =
+          (view.pressedMask & static_cast<std::uint8_t>(1u << quadrant_index)) !=
+          0;
+      const auto filled = active || pressed;
+      const auto foreground = filled ? contrast_text(accent) : ColorForeground;
+      fill_rounded_rect(canvas, 10, filled ? accent : ColorTile);
+      if (!filled) fill_rounded_rail(canvas, 6, 10, accent);
 
       const std::array<char, 1> switch_name{
           static_cast<char>('A' + quadrant_index)};
       draw_text(canvas, 18, -5,
                 std::string_view(switch_name.data(), switch_name.size()),
                 DeckFontRole::Switch,
-                active ? foreground : accent);
+                filled ? foreground : accent);
       const auto label = bounded_text(position.label, "EMPTY");
       const auto role = title_font(label, rect.width - 78);
       draw_text(canvas, 68, 15, label, role, foreground);
       draw_text(canvas, 68, 60,
-                active ? std::string_view("POSITION 2 / ON")
-                       : std::string_view("POSITION 1"),
+                pressed ? (active ? std::string_view("PRESSED / P2")
+                                  : std::string_view("PRESSED / P1"))
+                        : (active ? std::string_view("POSITION 2 / ON")
+                                  : std::string_view("POSITION 1")),
                 DeckFontRole::Label,
-                active ? foreground : ColorMuted);
-      fill_rect(canvas, 68, 84, active ? 128 : 88, 3,
-                active ? foreground : accent);
+                pressed ? foreground : (active ? foreground : ColorMuted));
+      fill_rect(canvas, 68, 84, filled ? 128 : 88, 3,
+                filled ? foreground : accent);
     } else {
       fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
       auto cursor = draw_text(canvas, 16, 10, "EXP / ", DeckFontRole::Label,

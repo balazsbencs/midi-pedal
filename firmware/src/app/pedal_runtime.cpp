@@ -60,6 +60,8 @@ bool PedalRuntime::initialize() {
   have_view_ = false;
   have_expression_schedule_ = false;
   usb_dropped_midi_ = usb_midi_.dropped_midi();
+  pressed_mask_ = 0;
+  press_feedback_until_ = 0;
   config_snapshot_ = config_.status();
   const auto loaded = reload_bank();
   render();
@@ -155,7 +157,14 @@ void PedalRuntime::handle_event(const SwitchEvent& event) {
 
 void PedalRuntime::tick(std::uint32_t now_ms) {
   refresh_configuration();
-  const auto switch_mask = switches_.read_mask();
+  const auto switch_mask = static_cast<std::uint8_t>(switches_.read_mask() & 0x0fu);
+  if (switch_mask != 0) {
+    pressed_mask_ = switch_mask;
+    press_feedback_until_ = now_ms + PressFeedbackMs;
+  } else if (pressed_mask_ != 0 &&
+             static_cast<std::int32_t>(now_ms - press_feedback_until_) >= 0) {
+    pressed_mask_ = 0;
+  }
   if (switch_mask != 0) live_action_latched_ = true;
   const auto events = switch_engine_.update(switch_mask, now_ms);
   for (const auto& event : events) handle_event(event);
@@ -237,7 +246,7 @@ bool PedalRuntime::navigate(NavigationCommand command) {
 
 bool PedalRuntime::same_view(const LiveView& left, const LiveView& right) {
   if (left.bank != right.bank || left.page != right.page || !same_ascii(left.bankName, right.bankName) ||
-      left.positions != right.positions ||
+      left.positions != right.positions || left.pressedMask != right.pressedMask ||
       !same_ascii(left.expressionLabel, right.expressionLabel) ||
       left.expressionAvailable != right.expressionAvailable || left.expressionValue != right.expressionValue ||
       left.usbConnected != right.usbConnected || left.configurationError != right.configurationError ||
@@ -254,6 +263,7 @@ void PedalRuntime::render() {
   LiveView view{};
   view.bank = static_cast<std::uint8_t>(bank_index_ + 1u);
   view.page = static_cast<std::uint8_t>(page_index_ + 1u);
+  view.pressedMask = pressed_mask_;
   for (std::size_t index = 0; index < view.positions.size(); ++index) view.positions[index] = 1;
   if (bank_loaded_) {
     copy_label(view.bankName, bank_.name, "BANK");

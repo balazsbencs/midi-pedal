@@ -166,6 +166,36 @@ TEST(LiveRenderer, DoesNotTransferUnchangedView) {
   EXPECT_TRUE(target.transfers.empty());
 }
 
+TEST(LiveRenderer, FillsOnlyThePressedQuadrantWithContrastingPressText) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  renderer.render(view);
+  target.transfers.clear();
+
+  view.pressedMask = 0x04;
+  renderer.render(view);
+
+  ASSERT_FALSE(target.transfers.empty());
+  const auto quadrant_c_y = static_cast<std::uint16_t>(
+      midi::display::DeckTop + midi::display::QuadrantHeight +
+      midi::display::DeckGap);
+  for (const auto& transfer : target.transfers) {
+    EXPECT_EQ(transfer.rect.x, midi::display::DeckInset);
+    EXPECT_GE(transfer.rect.y, quadrant_c_y);
+    EXPECT_LT(transfer.rect.y,
+              quadrant_c_y + midi::display::QuadrantHeight);
+  }
+  EXPECT_EQ(pixel_at(target, midi::display::DeckInset + 200,
+                     quadrant_c_y + 90),
+            midi::display::ColorAccent);
+  EXPECT_TRUE(has_color_in(
+      target,
+      {static_cast<std::uint16_t>(midi::display::DeckInset + 68),
+       static_cast<std::uint16_t>(quadrant_c_y + 60), 100, 20},
+      midi::display::ColorBackground));
+}
+
 TEST(LiveRenderer, RedrawsHeaderWhenWatchdogResetDiagnosticChanges) {
   FakeTarget target;
   midi::display::LiveRenderer renderer(target);
