@@ -134,6 +134,7 @@ The browser editor is the desk-side companion to Chromatic Deck. Its dark theme 
 - The bank rail begins below the command bar and keeps search plus the numbered bank list visible.
 - The A–D map is the visual center of gravity. Each switch becomes a large near-square field with a vivid cyan, coral, violet, or yellow identity, oversized letter, and compact label.
 - Preset settings, ordered messages, and expression settings live in one right-hand inspector with clear section boundaries.
+- The inspector favors progressive disclosure: disabled subsystems collapse to a status line, message rows show a compact summary until opened, and primary preset controls remain visible without scrolling at laptop height.
 - At narrower widths the inspector moves below the map; on phones all regions become one readable vertical flow.
 
 ### Editor material and type

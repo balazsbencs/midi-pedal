@@ -17,6 +17,20 @@ const positions: PositionFilter[] = ["BOTH", "POSITION_1", "POSITION_2"];
 
 function numberValue(event: ChangeEvent<HTMLInputElement>): number { return Number(event.target.value); }
 
+function messageSummary(message: Message): string {
+  if (message.type === "PC") return `PC ${message.program}`;
+  if (message.type === "CC") return `CC ${message.controller} → ${message.value}`;
+  if (message.type === "RELAY") return `Relay ${message.contact} · ${message.operation.toLowerCase()}`;
+  return message.operation.replaceAll("_", " ").toLowerCase();
+}
+
+function messageTypeLabel(message: Message): string {
+  if (message.type === "PC") return "Program Change";
+  if (message.type === "CC") return "Control Change";
+  if (message.type === "RELAY") return "Relay";
+  return "Navigation";
+}
+
 export function MessageEditor({ slot, index, count, onChange, onRemove, onMove }: MessageEditorProps) {
   const message = slot.message;
   const setMessage = (patch: Partial<Message>) => onChange({ message: patch as Record<string, unknown> });
@@ -27,9 +41,15 @@ export function MessageEditor({ slot, index, count, onChange, onRemove, onMove }
     else setMessage({ type, operation: "PAGE_UP" });
   };
   return (
-    <fieldset className="message-card">
-      <legend>Message {index + 1}</legend>
+    <details className="message-card">
+      <summary className="message-summary"><span className="message-index">{index + 1}</span><strong>{messageTypeLabel(message)}</strong><span>{messageSummary(message)}</span></summary>
+      <div className="message-details">
       <div className="message-toolbar">
+        <label>Type
+          <select value={message.type} onChange={event => changeType(event.target.value as Message["type"])}>
+            <option value="CC">Control Change</option><option value="PC">Program Change</option><option value="RELAY">Relay</option><option value="NAV">Navigation</option>
+          </select>
+        </label>
         <label>Trigger
           <select value={slot.trigger} onChange={event => onChange({ trigger: event.target.value as Trigger })}>
             {triggers.map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}
@@ -43,14 +63,9 @@ export function MessageEditor({ slot, index, count, onChange, onRemove, onMove }
         <div className="message-order" aria-label={`Reorder message ${index + 1}`}>
           <button type="button" aria-label={`Move message ${index + 1} up`} disabled={index === 0} onClick={() => onMove(-1)}>↑</button>
           <button type="button" aria-label={`Move message ${index + 1} down`} disabled={index === count - 1} onClick={() => onMove(1)}>↓</button>
-          <button type="button" className="danger-link" onClick={onRemove}>Remove</button>
+          <button type="button" className="danger-link" onClick={onRemove}>Delete</button>
         </div>
       </div>
-      <label>Type
-        <select value={message.type} onChange={event => changeType(event.target.value as Message["type"])}>
-          <option value="CC">Control Change</option><option value="PC">Program Change</option><option value="RELAY">Relay</option><option value="NAV">Navigation</option>
-        </select>
-      </label>
       {(message.type === "PC" || message.type === "CC") && <div className="field-grid">
         <label>Channel<input type="number" min={1} max={16} value={message.channel} onChange={event => setMessage({ channel: numberValue(event) })} /></label>
         {message.type === "PC" ? <label>Program<input type="number" min={0} max={127} value={message.program} onChange={event => setMessage({ program: numberValue(event) })} /></label> : <>
@@ -70,6 +85,7 @@ export function MessageEditor({ slot, index, count, onChange, onRemove, onMove }
         }}><option>BANK_UP</option><option>BANK_DOWN</option><option>BANK_SET</option><option>PAGE_UP</option><option>PAGE_DOWN</option><option>PAGE_SET</option></select></label>
         {message.operation.endsWith("_SET") && <label>Target<input type="number" min={1} max={message.operation.startsWith("PAGE") ? 4 : 128} value={message.target ?? 1} onChange={event => setMessage({ target: numberValue(event) })} /></label>}
       </div>}
-    </fieldset>
+      </div>
+    </details>
   );
 }

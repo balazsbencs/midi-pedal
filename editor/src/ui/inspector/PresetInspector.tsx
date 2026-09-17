@@ -19,7 +19,7 @@ export function PresetInspector({ state, dispatch }: { state: EditorState; dispa
       </div>
       <section className="preset-settings" aria-label="Preset settings">
         <PositionEditor preset={preset} position={state.selection.position} dispatch={dispatch} />
-        <label htmlFor="toggle-trigger">Toggle after
+        <label className="compact-select-row" htmlFor="toggle-trigger"><span>Toggle after</span>
           <select id="toggle-trigger" value={preset.toggleOn ?? "NONE"} onChange={event => dispatch({ type: "preset.toggleChanged", value: event.target.value === "NONE" ? null : event.target.value as "PRESS" | "RELEASE" | "LONG_PRESS" | "DOUBLE_TAP" })}>
             <option value="NONE">Do not toggle</option><option value="PRESS">Press</option><option value="RELEASE">Release</option><option value="LONG_PRESS">Long press</option><option value="DOUBLE_TAP">Double tap</option>
           </select>
