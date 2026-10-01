@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 #include <span>
 #include <string>
 #include <vector>
@@ -49,8 +50,9 @@ midi::LiveView base_view() {
 bool has_rect_in(const FakeTarget& target, std::uint16_t x, std::uint16_t y,
                 std::uint16_t width, std::uint16_t height) {
   for (const auto& transfer : target.transfers) {
-    if (transfer.rect.x == x && transfer.rect.y == y && transfer.rect.width == width &&
-        transfer.rect.height > 0 && transfer.rect.height <= height) {
+    if (transfer.rect.x >= x && transfer.rect.y >= y &&
+        transfer.rect.x + transfer.rect.width <= x + width &&
+        transfer.rect.y + transfer.rect.height <= y + height) {
       return true;
     }
   }
@@ -181,7 +183,8 @@ TEST(LiveRenderer, FillsOnlyThePressedQuadrantWithContrastingPressText) {
       midi::display::DeckTop + midi::display::QuadrantHeight +
       midi::display::DeckGap);
   for (const auto& transfer : target.transfers) {
-    EXPECT_EQ(transfer.rect.x, midi::display::DeckInset);
+    EXPECT_GE(transfer.rect.x, midi::display::DeckInset);
+    EXPECT_LT(transfer.rect.x, midi::display::DeckInset + midi::display::QuadrantWidth);
     EXPECT_GE(transfer.rect.y, quadrant_c_y);
     EXPECT_LT(transfer.rect.y,
               quadrant_c_y + midi::display::QuadrantHeight);
@@ -231,7 +234,7 @@ TEST(LiveRenderer, RedrawsTheNamedHeaderAndAffectedQuadrantOnly) {
                           midi::display::QuadrantWidth, midi::display::QuadrantHeight));
   for (const auto& transfer : target.transfers) {
     const bool header = transfer.rect.y < midi::display::HeaderHeight;
-    const bool quadrant_b = transfer.rect.x == quadrant_b_x &&
+    const bool quadrant_b = transfer.rect.x >= quadrant_b_x &&
                             transfer.rect.y >= midi::display::DeckTop &&
                             transfer.rect.y < midi::display::DeckTop +
                                                   midi::display::QuadrantHeight;
@@ -316,7 +319,8 @@ TEST(LiveRenderer, OnlyUpdatesChangedQuadrantAndExpressionFooter) {
       midi::display::DeckTop + midi::display::QuadrantHeight +
       midi::display::DeckGap);
   for (const auto& transfer : target.transfers) {
-    const bool quadrant_c = transfer.rect.x == midi::display::DeckInset &&
+    const bool quadrant_c = transfer.rect.x >= midi::display::DeckInset &&
+        transfer.rect.x < midi::display::DeckInset + midi::display::QuadrantWidth &&
         transfer.rect.y >= quadrant_c_y &&
         transfer.rect.y < quadrant_c_y + midi::display::QuadrantHeight;
     const bool footer = transfer.rect.y >= midi::display::FooterY;
@@ -361,4 +365,53 @@ TEST(LiveRenderer, MatchesFactoryEmptyGoldenRaster) {
   const std::vector<std::uint8_t> expected((std::istreambuf_iterator<char>(golden)),
                                            std::istreambuf_iterator<char>());
   EXPECT_EQ(rasterize(target.transfers), expected);
+}
+
+TEST(LiveRenderer, PartialUpdatesMatchFreshRenderAcrossStateTransitions) {
+  FakeTarget incremental;
+  midi::display::LiveRenderer renderer(incremental);
+  auto view = base_view();
+  renderer.render(view);
+  for (unsigned step = 0; step < 80; ++step) {
+    const auto index = step % 4;
+    view.pressedMask = static_cast<std::uint8_t>(step % 16);
+    view.positions[index] = step % 3 == 0 ? 1 : 2;
+    view.selectedPositions[index].label = ascii<12>(step % 2 ? "I" : "LONG LABEL12");
+    view.selectedPositions[index].accentRgb565 = step % 3 ? midi::display::ColorSuccess : 0;
+    view.bankName = ascii<20>(step % 2 ? "STAGE" : "B");
+    view.bank = static_cast<std::uint8_t>(step + 1);
+    view.page = static_cast<std::uint8_t>(step % 4 + 1);
+    view.expressionLabel = ascii<12>(step % 2 ? "VOL" : "WAH");
+    view.expressionValue = static_cast<std::uint8_t>((step * 17) % 128);
+    view.expressionAvailable = step % 3 != 0;
+    view.configurationError = step % 5 == 0;
+    view.queueOverflow = step % 7 == 0;
+    view.watchdogReset = step % 11 == 0;
+    view.usbConnected = step % 2 == 0;
+    if (step == 40) renderer.invalidate();
+    renderer.render(view);
+    FakeTarget fresh;
+    midi::display::LiveRenderer fresh_renderer(fresh);
+    fresh_renderer.render(view);
+    ASSERT_EQ(rasterize(incremental.transfers), rasterize(fresh.transfers)) << "Step " << step;
+  }
+}
+
+
+TEST(LiveRenderer, LabelOnlyChangesCopyLessThanHalfAQuadrant) {
+  FakeTarget target;
+  midi::display::LiveRenderer renderer(target);
+  auto view = base_view();
+  view.selectedPositions[0].label = ascii<12>("RHYTHM");
+  renderer.render(view);
+  target.transfers.clear();
+  view.selectedPositions[0].label = ascii<12>("LEAD");
+  renderer.render(view);
+  std::size_t pixels = 0;
+  for (const auto& transfer : target.transfers) pixels += transfer.pixels.size();
+  const auto old_pixels = midi::display::QuadrantWidth * midi::display::QuadrantHeight;
+  EXPECT_GT(pixels, 0U);
+  EXPECT_LT(pixels, old_pixels / 2U);
+  std::cout << "Label change: " << pixels << " framebuffer pixels copied (previously "
+            << old_pixels << ")\n";
 }

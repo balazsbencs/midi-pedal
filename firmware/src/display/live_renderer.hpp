@@ -40,6 +40,7 @@ struct Rect {
 class RenderTarget {
  public:
   virtual ~RenderTarget() = default;
+  // write must consume or copy the pixels before returning.
   virtual void write(Rect rect, std::span<const std::uint16_t> pixels) = 0;
 };
 
@@ -58,12 +59,18 @@ class LiveRenderer {
   void render_quadrant(unsigned index, const LiveView& view);
   void render_footer(const LiveView& view);
   void render_rect(Rect rect, Region region, const LiveView& view,
-                   unsigned quadrant_index, std::uint16_t border);
+                   unsigned quadrant_index);
+
+  void draw_tile(Rect rect, Region region, const LiveView& view,
+                 unsigned quadrant_index, std::uint16_t y_offset, std::uint16_t rows,
+                 std::span<std::uint16_t> pixels);
 
   RenderTarget& target_;
   LiveView previous_{};
   bool has_previous_{};
   std::array<std::uint16_t, TilePixels> pixels_{};
+  std::array<std::uint16_t, TilePixels> previous_pixels_{};
+  std::array<std::uint16_t, TilePixels> output_pixels_{};
 };
 
 }  // namespace midi::display
