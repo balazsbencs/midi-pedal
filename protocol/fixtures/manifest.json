@@ -5,13 +5,13 @@
       "name": "full-boundary-valid",
       "json": "json/full-boundary-valid.json",
       "binary": "bin/full-boundary-valid.bin",
-      "sha256": "ef74e4745369ab87c01a5b31ae1e9a1bebc2b66ba8a3aa3295f1c5f8782df0dc"
+      "sha256": "76592602d3af6ebff48e7d3c96e97161e614633849a75269fb6cea3b90e37b91"
     },
     {
       "name": "minimal-valid",
       "json": "json/minimal-valid.json",
       "binary": "bin/minimal-valid.bin",
-      "sha256": "1653519eab37be43aa195fe31da7669e1dd1e0bf55f384333de1415c9b61dbd3"
+      "sha256": "15f6afa6588be97e435514971714b214e2f5ee3bc2f5ce69e3a1e37a7734d718"
     }
   ]
 }
