@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <cstdint>
 #include <span>
 
@@ -17,7 +18,7 @@ class St7796sDisplay final : public DisplayPort, public RenderTarget {
   void initialize();
   void present(const LiveView& view) override;
   void write(Rect rect, std::span<const std::uint16_t> pixels) override;
-  // Advances an in-progress display transfer by a bounded number of scanlines.
+  // Queues a bounded DMA chunk; returns immediately while the wire is busy.
   // Call once per control-loop iteration after time-critical I/O has run.
   void service();
 
@@ -31,6 +32,10 @@ class St7796sDisplay final : public DisplayPort, public RenderTarget {
   void begin_transfer();
 
   LiveRenderer renderer_{*this};
+  std::array<std::uint8_t, ScreenWidth * RowsPerService * 2> transfer_bytes_{};
+  int dma_channel_{-1};
+  bool chunk_pending_{};
+  std::uint16_t chunk_rows_{};
   bool initialized_{};
   bool dirty_pending_{};
   bool transfer_active_{};

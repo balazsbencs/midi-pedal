@@ -6,6 +6,7 @@
 #include "../board/pico2_pins.hpp"
 
 #ifdef PICO_ON_DEVICE
+#include "hardware/dma.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "pico/stdlib.h"
@@ -68,6 +69,7 @@ void St7796sDisplay::initialize() {
   command(0x20);  // Display inversion off; this panel renders logical RGB565 directly.
   command(0x29);  // Display on.
   sleep_ms(150);
+  dma_channel_ = dma_claim_unused_channel(true);
   initialized_ = true;
 #else
   initialized_ = true;
@@ -170,24 +172,34 @@ void St7796sDisplay::begin_transfer() {
 void St7796sDisplay::service() {
 #ifdef PICO_ON_DEVICE
   if (!initialized_) return;
+  if (chunk_pending_) {
+    // DMA completion only fills the SPI FIFO. Retain CS and the staging
+    // buffer until the last bit has left the shift register.
+    if (dma_channel_is_busy(dma_channel_) || spi_is_busy(spi0)) return;
+    chunk_pending_ = false;
+    transfer_row_ = static_cast<std::uint16_t>(transfer_row_ + chunk_rows_);
+    if (transfer_row_ == transfer_rect_.height) {
+      gpio_put(board::DisplayCs, 1);
+      transfer_active_ = false;
+      return;
+    }
+  }
   if (!transfer_active_) begin_transfer();
   if (!transfer_active_) return;
 
-  const auto rows = std::min<std::uint16_t>(
+  chunk_rows_ = std::min<std::uint16_t>(
       RowsPerService, transfer_rect_.height - transfer_row_);
-  const auto bytes_per_row = static_cast<std::size_t>(transfer_rect_.width) * 2;
-  for (std::uint16_t index = 0; index < rows; ++index) {
-    const auto row = static_cast<std::uint16_t>(transfer_rect_.y +
-                                                transfer_row_ + index);
-    const auto offset = static_cast<std::size_t>(row) * ScanlineBytes +
-                        static_cast<std::size_t>(transfer_rect_.x) * 2;
-    spi_write_blocking(spi0, frame_bytes.data() + offset, bytes_per_row);
-  }
-  transfer_row_ = static_cast<std::uint16_t>(transfer_row_ + rows);
-  if (transfer_row_ == transfer_rect_.height) {
-    gpio_put(board::DisplayCs, 1);
-    transfer_active_ = false;
-  }
+  const auto byte_count = static_cast<std::size_t>(chunk_rows_) * ScanlineBytes;
+  const auto offset = static_cast<std::size_t>(transfer_row_) * ScanlineBytes;
+  // present() may update the framebuffer while DMA runs. Copy this chunk
+  // into an owned staging buffer so pixels already queued remain stable.
+  std::copy_n(frame_bytes.data() + offset, byte_count, transfer_bytes_.data());
+  auto config = dma_channel_get_default_config(dma_channel_);
+  channel_config_set_transfer_data_size(&config, DMA_SIZE_8);
+  channel_config_set_dreq(&config, spi_get_dreq(spi0, true));
+  dma_channel_configure(dma_channel_, &config, &spi0_hw->dr,
+                        transfer_bytes_.data(), byte_count, true);
+  chunk_pending_ = true;
 #endif
 }
 

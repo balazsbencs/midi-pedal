@@ -128,6 +128,9 @@ void draw_glyph(Canvas canvas, std::int32_t x, std::int32_t y,
   const auto& glyph = font.glyphs[safe_codepoint - font.firstCharacter];
   const auto glyph_x = x + glyph.bearingX;
   const auto glyph_y = y + glyph.bearingY;
+  if (glyph_x >= canvas.width || glyph_x + glyph.width <= 0 ||
+      glyph_y >= canvas.yOffset + canvas.rows ||
+      glyph_y + glyph.height <= canvas.yOffset) return;
   for (std::uint16_t row = 0; row < glyph.height; ++row) {
     for (std::uint16_t column = 0; column < glyph.width; ++column) {
       const auto pixel_index =
@@ -285,8 +288,7 @@ void LiveRenderer::render(const LiveView& view) {
 }
 
 void LiveRenderer::render_header(const LiveView& view) {
-  render_rect({0, 0, ScreenWidth, HeaderHeight}, Region::Header, view, 0,
-              ColorPanel);
+  render_rect({0, 0, ScreenWidth, HeaderHeight}, Region::Header, view, 0);
 }
 
 void LiveRenderer::render_quadrant(unsigned index, const LiveView& view) {
@@ -294,20 +296,16 @@ void LiveRenderer::render_quadrant(unsigned index, const LiveView& view) {
       DeckInset + (index % 2) * (QuadrantWidth + DeckGap));
   const auto y = static_cast<std::uint16_t>(
       DeckTop + (index / 2) * (QuadrantHeight + DeckGap));
-  const auto configured = view.selectedPositions[index].accentRgb565;
-  const auto accent = configured == 0 ? ColorAccent : configured;
   render_rect({x, y, QuadrantWidth, QuadrantHeight}, Region::Quadrant, view,
-              index, accent);
+              index);
 }
 
 void LiveRenderer::render_footer(const LiveView& view) {
-  render_rect({0, FooterY, ScreenWidth, FooterHeight}, Region::Footer, view, 0,
-              ColorPanel);
+  render_rect({0, FooterY, ScreenWidth, FooterHeight}, Region::Footer, view, 0);
 }
 
 void LiveRenderer::render_rect(Rect rect, Region region, const LiveView& view,
-                               unsigned quadrant_index,
-                               std::uint16_t accent) {
+                               unsigned quadrant_index) {
   if (rect.width == 0 || rect.height == 0 || rect.width > ScreenWidth) return;
   const auto rows_per_transfer =
       static_cast<std::uint16_t>(TilePixels / rect.width);
@@ -318,95 +316,126 @@ void LiveRenderer::render_rect(Rect rect, Region region, const LiveView& view,
         std::min<std::uint16_t>(transfer_rows, rect.height - y_offset);
     const auto pixel_count = static_cast<std::size_t>(rect.width) * rows;
     auto pixels = std::span<std::uint16_t>(pixels_.data(), pixel_count);
-    std::fill(pixels.begin(), pixels.end(), ColorBackground);
-    const Canvas canvas{pixels, rect.width, rows, y_offset, rect.height};
-
-    if (region == Region::Header) {
-      fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
-      std::array<char, 3> bank_digits{};
-      draw_text(canvas, 16, 1, "BANK", DeckFontRole::Label, ColorMuted);
-      draw_text(canvas, 55, 1, decimal_text(view.bank, bank_digits, true),
-                DeckFontRole::Label, ColorMuted);
-      draw_text(canvas, 16, 12, bounded_text(view.bankName, "FACTORY"),
-                DeckFontRole::Bank, ColorForeground);
-
-      if (view.configurationError) {
-        draw_text_right(canvas, 463, 10, "CONFIG!", DeckFontRole::Label,
-                        ColorError);
-      } else if (view.queueOverflow) {
-        draw_text_right(canvas, 463, 10, "QUEUE!", DeckFontRole::Label,
-                        ColorWarning);
-      } else if (view.watchdogReset) {
-        draw_text_right(canvas, 463, 10, "WATCHDOG!", DeckFontRole::Label,
-                        ColorWarning);
-      } else {
-        const std::array<char, 7> page_text{
-            'P', ' ', static_cast<char>('0' + view.page), ' ', '/', ' ', '4'};
-        draw_text(canvas, 355, 10,
-                  std::string_view(page_text.data(), page_text.size()),
-                  DeckFontRole::Label, ColorMuted);
-        draw_text(canvas, 417, 10, view.usbConnected ? "USB" : "USB-",
-                  DeckFontRole::Label,
-                  view.usbConnected ? ColorForeground : ColorMuted);
-        draw_circle(canvas, 461, 21, 5,
-                    view.usbConnected ? ColorSuccess : ColorMuted);
-      }
-    } else if (region == Region::Quadrant) {
-      const auto& position = view.selectedPositions[quadrant_index];
-      const auto active = view.positions[quadrant_index] == 2;
-      const auto pressed =
-          (view.pressedMask & static_cast<std::uint8_t>(1u << quadrant_index)) !=
-          0;
-      const auto filled = active || pressed;
-      const auto foreground = filled ? contrast_text(accent) : ColorForeground;
-      fill_rounded_rect(canvas, 10, filled ? accent : ColorTile);
-      if (!filled) fill_rounded_rail(canvas, 6, 10, accent);
-
-      const std::array<char, 1> switch_name{
-          static_cast<char>('A' + quadrant_index)};
-      draw_text(canvas, 18, -5,
-                std::string_view(switch_name.data(), switch_name.size()),
-                DeckFontRole::Switch,
-                filled ? foreground : accent);
-      const auto label = bounded_text(position.label, "EMPTY");
-      const auto role = title_font(label, rect.width - 78);
-      draw_text(canvas, 68, 15, label, role, foreground);
-      draw_text(canvas, 68, 60,
-                pressed ? (active ? std::string_view("PRESSED / P2")
-                                  : std::string_view("PRESSED / P1"))
-                        : (active ? std::string_view("POSITION 2 / ON")
-                                  : std::string_view("POSITION 1")),
-                DeckFontRole::Label,
-                pressed ? foreground : (active ? foreground : ColorMuted));
-      fill_rect(canvas, 68, 84, filled ? 128 : 88, 3,
-                filled ? foreground : accent);
-    } else {
-      fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
-      auto cursor = draw_text(canvas, 16, 10, "EXP / ", DeckFontRole::Label,
-                              ColorForeground);
-      draw_text(canvas, cursor, 10,
-                bounded_text(view.expressionLabel, "NONE"),
-                DeckFontRole::Label,
-                view.expressionAvailable ? ColorForeground : ColorMuted);
-      fill_rect(canvas, 175, 17, 237, 6, ColorMeterTrack);
-      if (view.expressionAvailable) {
-        const auto meter_width = static_cast<std::int32_t>(
-            static_cast<unsigned>(view.expressionValue) * 237U / 127U);
-        fill_rect(canvas, 175, 17, meter_width, 6, ColorAccent);
-        std::array<char, 3> value_digits{};
-        const auto value = decimal_text(view.expressionValue, value_digits);
-        draw_text_right(canvas, 463, 4, value, DeckFontRole::CompactTitle,
-                        ColorAccent);
-      } else {
-        draw_text_right(canvas, 463, 4, "--", DeckFontRole::CompactTitle,
-                        ColorMuted);
+    draw_tile(rect, region, view, quadrant_index, y_offset, rows, pixels);
+    if (!has_previous_) {
+      target_.write({rect.x, static_cast<std::uint16_t>(rect.y + y_offset), rect.width, rows}, pixels);
+      continue;
+    }
+    auto old_pixels = std::span<std::uint16_t>(previous_pixels_.data(), pixel_count);
+    draw_tile(rect, region, previous_, quadrant_index, y_offset, rows, old_pixels);
+    std::uint16_t min_x = rect.width, min_y = rows, max_x = 0, max_y = 0;
+    for (std::uint16_t y = 0; y < rows; ++y) {
+      for (std::uint16_t x = 0; x < rect.width; ++x) {
+        const auto offset = static_cast<std::size_t>(y) * rect.width + x;
+        if (pixels[offset] == old_pixels[offset]) continue;
+        min_x = std::min(min_x, x);
+        min_y = std::min(min_y, y);
+        max_x = std::max(max_x, x);
+        max_y = std::max(max_y, y);
       }
     }
+    if (min_x == rect.width) continue;
+    const Rect dirty{static_cast<std::uint16_t>(rect.x + min_x),
+                     static_cast<std::uint16_t>(rect.y + y_offset + min_y),
+                     static_cast<std::uint16_t>(max_x - min_x + 1),
+                     static_cast<std::uint16_t>(max_y - min_y + 1)};
+    for (std::uint16_t y = 0; y < dirty.height; ++y) {
+      std::copy_n(pixels.begin() + static_cast<std::size_t>(y + min_y) * rect.width + min_x,
+                  dirty.width, output_pixels_.begin() + static_cast<std::size_t>(y) * dirty.width);
+    }
+    target_.write(dirty, std::span<const std::uint16_t>(output_pixels_.data(),
+                  static_cast<std::size_t>(dirty.width) * dirty.height));
+  }
+}
 
-    target_.write(
-        {rect.x, static_cast<std::uint16_t>(rect.y + y_offset), rect.width,
-         rows},
-        pixels);
+void LiveRenderer::draw_tile(Rect rect, Region region, const LiveView& view,
+                            unsigned quadrant_index, std::uint16_t y_offset,
+                            std::uint16_t rows, std::span<std::uint16_t> pixels) {
+  const auto configured = view.selectedPositions[quadrant_index].accentRgb565;
+  const auto accent = configured == 0 ? ColorAccent : configured;
+  std::fill(pixels.begin(), pixels.end(), ColorBackground);
+  const Canvas canvas{pixels, rect.width, rows, y_offset, rect.height};
+
+  if (region == Region::Header) {
+    fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
+    std::array<char, 3> bank_digits{};
+    draw_text(canvas, 16, 1, "BANK", DeckFontRole::Label, ColorMuted);
+    draw_text(canvas, 55, 1, decimal_text(view.bank, bank_digits, true),
+              DeckFontRole::Label, ColorMuted);
+    draw_text(canvas, 16, 12, bounded_text(view.bankName, "FACTORY"),
+              DeckFontRole::Bank, ColorForeground);
+
+    if (view.configurationError) {
+      draw_text_right(canvas, 463, 10, "CONFIG!", DeckFontRole::Label,
+                      ColorError);
+    } else if (view.queueOverflow) {
+      draw_text_right(canvas, 463, 10, "QUEUE!", DeckFontRole::Label,
+                      ColorWarning);
+    } else if (view.watchdogReset) {
+      draw_text_right(canvas, 463, 10, "WATCHDOG!", DeckFontRole::Label,
+                      ColorWarning);
+    } else {
+      const std::array<char, 7> page_text{
+          'P', ' ', static_cast<char>('0' + view.page), ' ', '/', ' ', '4'};
+      draw_text(canvas, 355, 10,
+                std::string_view(page_text.data(), page_text.size()),
+                DeckFontRole::Label, ColorMuted);
+      draw_text(canvas, 417, 10, view.usbConnected ? "USB" : "USB-",
+                DeckFontRole::Label,
+                view.usbConnected ? ColorForeground : ColorMuted);
+      draw_circle(canvas, 461, 21, 5,
+                  view.usbConnected ? ColorSuccess : ColorMuted);
+    }
+  } else if (region == Region::Quadrant) {
+    const auto& position = view.selectedPositions[quadrant_index];
+    const auto active = view.positions[quadrant_index] == 2;
+    const auto pressed =
+        (view.pressedMask & static_cast<std::uint8_t>(1u << quadrant_index)) !=
+        0;
+    const auto filled = active || pressed;
+    const auto foreground = filled ? contrast_text(accent) : ColorForeground;
+    fill_rounded_rect(canvas, 10, filled ? accent : ColorTile);
+    if (!filled) fill_rounded_rail(canvas, 6, 10, accent);
+
+    const std::array<char, 1> switch_name{
+        static_cast<char>('A' + quadrant_index)};
+    draw_text(canvas, 18, -5,
+              std::string_view(switch_name.data(), switch_name.size()),
+              DeckFontRole::Switch,
+              filled ? foreground : accent);
+    const auto label = bounded_text(position.label, "EMPTY");
+    const auto role = title_font(label, rect.width - 78);
+    draw_text(canvas, 68, 15, label, role, foreground);
+    draw_text(canvas, 68, 60,
+              pressed ? (active ? std::string_view("PRESSED / P2")
+                                : std::string_view("PRESSED / P1"))
+                      : (active ? std::string_view("POSITION 2 / ON")
+                                : std::string_view("POSITION 1")),
+              DeckFontRole::Label,
+              pressed ? foreground : (active ? foreground : ColorMuted));
+    fill_rect(canvas, 68, 84, filled ? 128 : 88, 3,
+              filled ? foreground : accent);
+  } else {
+    fill_rect(canvas, 0, 0, rect.width, rect.height, ColorPanel);
+    auto cursor = draw_text(canvas, 16, 10, "EXP / ", DeckFontRole::Label,
+                            ColorForeground);
+    draw_text(canvas, cursor, 10,
+              bounded_text(view.expressionLabel, "NONE"),
+              DeckFontRole::Label,
+              view.expressionAvailable ? ColorForeground : ColorMuted);
+    fill_rect(canvas, 175, 17, 237, 6, ColorMeterTrack);
+    if (view.expressionAvailable) {
+      const auto meter_width = static_cast<std::int32_t>(
+          static_cast<unsigned>(view.expressionValue) * 237U / 127U);
+      fill_rect(canvas, 175, 17, meter_width, 6, ColorAccent);
+      std::array<char, 3> value_digits{};
+      const auto value = decimal_text(view.expressionValue, value_digits);
+      draw_text_right(canvas, 463, 4, value, DeckFontRole::CompactTitle,
+                      ColorAccent);
+    } else {
+      draw_text_right(canvas, 463, 4, "--", DeckFontRole::CompactTitle,
+                      ColorMuted);
+    }
   }
 }
 
